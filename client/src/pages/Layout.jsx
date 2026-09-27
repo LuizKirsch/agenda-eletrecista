@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth';
 import TiposAtividade from './TiposAtividade';
 
 export default function Layout() {
   const { usuario, logout } = useAuth();
-  const [tiposAberto, setTiposAberto] = useState(false);
-  const abrirTipos = () => setTiposAberto(true);
+  const { pathname } = useLocation();
+  const [tipos, setTipos] = useState(null);
+  const [versaoTipos, setVersaoTipos] = useState(0);
+  const abrirTipos = (mensagem = '') => setTipos({ mensagem });
+
+  function fecharTipos() {
+    setTipos(null);
+    setVersaoTipos((v) => v + 1);
+  }
 
   return (
     <>
@@ -16,15 +23,15 @@ export default function Layout() {
           <NavLink to="/agenda">Agenda</NavLink>
           <NavLink to="/clientes">Clientes</NavLink>
           <NavLink to="/usuarios">Usuários</NavLink>
-          <button type="button" className="nav-botao" onClick={abrirTipos}>Tipos de atividade</button>
+          <button type="button" className="nav-botao" onClick={() => abrirTipos()}>Tipos de atividade</button>
         </nav>
         <span className="quem">{usuario.nome}</span>
         <button onClick={logout}>Sair</button>
       </header>
-      <main className="conteudo">
-        <Outlet context={{ abrirTipos }} />
+      <main className={pathname.startsWith('/agenda') ? 'conteudo largo' : 'conteudo'}>
+        <Outlet context={{ abrirTipos, versaoTipos }} />
       </main>
-      {tiposAberto && <TiposAtividade onFechar={() => setTiposAberto(false)} />}
+      {tipos && <TiposAtividade mensagem={tipos.mensagem} onFechar={fecharTipos} />}
     </>
   );
 }

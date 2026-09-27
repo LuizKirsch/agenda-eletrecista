@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 
-export default function TiposAtividade({ onFechar }) {
+export default function TiposAtividade({ mensagem = '', onFechar }) {
   const dialogRef = useRef(null);
   const [tipos, setTipos] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
-  const [erro, setErro] = useState('');
+  const [erro, setErro] = useState(mensagem);
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => {
