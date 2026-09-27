@@ -1,11 +1,10 @@
 const { Op } = require('sequelize');
-const { TipoAtividade } = require('../models');
+const { TipoAtividade, AtividadeOs } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 
 // Única fonte da contagem de uso (RF 5.6, RF 5.7, RN 19).
-async function contarUso(tipoId) { // eslint-disable-line no-unused-vars
-  // TODO: contar registros em atividade_os quando o módulo Agenda existir
-  return 0;
+function contarUso(tipoId) {
+  return AtividadeOs.count({ where: { tipo_atividade_id: tipoId } });
 }
 
 async function comUso(tipo) {
