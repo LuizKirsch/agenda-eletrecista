@@ -97,3 +97,37 @@ textarea { resize: vertical; }
 .lista .texto { margin: 4px 0 0; white-space: pre-wrap; }
 .botao { display: flex; align-items: center; justify-content: center; border-radius: 8px; text-decoration: none; }
 .busca { margin: 16px 0; }
+
+.cabecalho { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.cabecalho h1, .cabecalho h2 { margin: 0; }
+
+.topo .nav-botao { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: inherit; }
+
+.modal {
+  width: min(760px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.modal::backdrop { background: rgba(0, 0, 0, .5); }
+.modal > * + * { margin-top: 16px; }
+.modal .cabecalho { margin-bottom: 0; }
+
+@media (max-width: 639px) {
+  .modal { width: 100%; height: 100%; max-height: none; margin: 0; border-radius: 0; }
+}
+
+.tabela { overflow-x: auto; background: var(--superficie); border: 1px solid var(--linha); border-radius: 8px; }
+.tabela table { width: 100%; border-collapse: collapse; }
+.tabela th, .tabela td { padding: 8px 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--linha); }
+.tabela th { font-size: .875rem; color: var(--texto-suave); white-space: nowrap; }
+.tabela tr:last-child td { border-bottom: 0; }
+.tabela td.acoes { display: table-cell; margin: 0; white-space: nowrap; }
+.tabela td.acoes button + button { margin-left: 8px; }
+.tabela input { min-width: 140px; }
+.tabela input[type="number"] { min-width: 0; width: 90px; }
+.inativo td:not(.acoes) { opacity: .55; }

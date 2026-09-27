@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { AuthProvider, RotaAutenticada } from './auth';
+import Agenda from './pages/Agenda';
 import Cliente from './pages/Cliente';
 import ClienteNovo from './pages/ClienteNovo';
 import Clientes from './pages/Clientes';
@@ -17,8 +18,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/login" element={<Login />} />
         <Route element={<RotaAutenticada><Layout /></RotaAutenticada>}>
           <Route path="/" element={<Navigate to="/agenda" replace />} />
-          {/* espaço reservado; o módulo Agenda substitui */}
-          <Route path="/agenda" element={<h1>Agenda</h1>} />
+          <Route path="/agenda" element={<Agenda />} />
           <Route path="/usuarios" element={<Usuarios />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/clientes/novo" element={<ClienteNovo />} />
