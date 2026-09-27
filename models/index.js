@@ -39,9 +39,16 @@ const EnderecoObservacao = sequelize.define('EnderecoObservacao', {
   criado_em: { type: DataTypes.DATE },
 }, { tableName: 'endereco_observacao', timestamps: false, underscored: true });
 
+const TipoAtividade = sequelize.define('TipoAtividade', {
+  id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
+  nome: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  duracao_padrao_min: { type: DataTypes.INTEGER, allowNull: false },
+  ativo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+}, { tableName: 'tipo_atividade', timestamps: false, underscored: true });
+
 Cliente.hasMany(Endereco, { foreignKey: 'cliente_id', as: 'enderecos' });
 Endereco.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 Endereco.hasMany(EnderecoObservacao, { foreignKey: 'endereco_id', as: 'observacoes' });
 EnderecoObservacao.belongsTo(Endereco, { foreignKey: 'endereco_id', as: 'endereco' });
 
-module.exports = { sequelize, Usuario, Cliente, Endereco, EnderecoObservacao };
+module.exports = { sequelize, Usuario, Cliente, Endereco, EnderecoObservacao, TipoAtividade };
