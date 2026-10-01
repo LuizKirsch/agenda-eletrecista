@@ -1,6 +1,10 @@
 require('dotenv').config();
 
-const db = {
+const db = process.env.DB_DIALECT === 'sqlite' ? {
+  dialect: 'sqlite',
+  storage: process.env.DB_STORAGE || 'dev.sqlite',
+  logging: false,
+} : {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
