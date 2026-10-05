@@ -1,4 +1,4 @@
-# ⚡ Agenda do Eletricista
+# ⚡ Agenda
 
 Sistema web para organizar o dia a dia de um eletricista e da secretária: clientes, endereços, ordens de serviço e uma **agenda semanal** com arrastar e soltar.
 
