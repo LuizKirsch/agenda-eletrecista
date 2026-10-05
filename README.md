@@ -14,6 +14,10 @@ Sistema web para organizar o dia a dia de um eletricista e da secretária: clien
 - ✅ Conclusão e cancelamento de atividades
 - 👤 **Gestão de usuários** (edição e exclusão restritas à secretária)
 
+## 📚 Documentação
+
+Requisitos, regras de negócio, domínio, decisões de arquitetura e status da implementação ficam em um vault do Obsidian: [agenda-eletrecista-obsidian](https://github.com/LuizKirsch/agenda-eletrecista-obsidian). Comece por `00 - Visão Geral.md`.
+
 ## 🛠️ Stack
 
 | Camada   | Tecnologias |
