@@ -26,7 +26,10 @@ export default function Login() {
   return (
     <main className="login">
       <form className="cartao" onSubmit={enviar}>
-        <h1>Agenda do Eletricista</h1>
+        <div>
+          <h1>Agenda</h1>
+          <span className="sobretitulo">Agenda e OS</span>
+        </div>
         <label>
           Login
           <input name="login" autoComplete="username" autoCapitalize="none" required />

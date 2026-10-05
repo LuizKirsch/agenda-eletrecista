@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth';
 import TiposAtividade from './TiposAtividade';
 
+const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
+
 export default function Layout() {
   const { usuario, logout } = useAuth();
   const { pathname } = useLocation();
@@ -17,17 +19,23 @@ export default function Layout() {
 
   return (
     <>
-      <header className="topo">
-        <strong className="marca">Agenda do Eletricista</strong>
+      <aside className="lateral">
+        <div className="marca">
+          <strong>⚡ Agenda</strong>
+        </div>
         <nav>
-          <NavLink to="/agenda">Agenda</NavLink>
-          <NavLink to="/clientes">Clientes</NavLink>
-          <NavLink to="/usuarios">Usuários</NavLink>
-          <button type="button" className="nav-botao" onClick={() => abrirTipos()}>Tipos de atividade</button>
+          <NavLink to="/agenda"><i>01</i>Agenda</NavLink>
+          <NavLink to="/clientes"><i>02</i>Clientes</NavLink>
+          <button type="button" className={tipos ? 'active' : undefined} onClick={() => abrirTipos()}><i>03</i>Tipos de Atividade</button>
+          <NavLink to="/usuarios"><i>04</i>Usuários</NavLink>
+          <button type="button" className="sair-celular" onClick={logout}><i>—</i>Sair</button>
         </nav>
-        <span className="quem">{usuario.nome}</span>
-        <button onClick={logout}>Sair</button>
-      </header>
+        <div className="quem">
+          <strong>{usuario.nome}</strong>
+          <span>{PERFIS[usuario.perfil]}</span>
+          <button type="button" onClick={logout}>Sair</button>
+        </div>
+      </aside>
       <main className={pathname.startsWith('/agenda') ? 'conteudo largo' : 'conteudo'}>
         <Outlet context={{ abrirTipos, versaoTipos }} />
       </main>
