@@ -1,5 +1,8 @@
 import { useEffect, useId, useRef } from 'react';
 
+export const aposAnimacao = (fn) => (e) =>
+  Promise.allSettled(e.currentTarget.getAnimations().map((a) => a.finished)).then(fn);
+
 export function fecharAoClicarFora(e) {
   if (e.target !== e.currentTarget) return;
   const r = e.currentTarget.getBoundingClientRect();
@@ -15,7 +18,7 @@ export default function Modal({ titulo, subtitulo, onFechar, children }) {
   }, []);
 
   return (
-    <dialog ref={ref} className="modal" onClose={onFechar} onClick={fecharAoClicarFora} aria-labelledby={idTitulo}>
+    <dialog ref={ref} className="modal" onClose={aposAnimacao(onFechar)} onClick={fecharAoClicarFora} aria-labelledby={idTitulo}>
       <div className="cabecalho">
         <h2 id={idTitulo}>{titulo}</h2>
         <button type="button" onClick={() => ref.current.close()}>Fechar</button>

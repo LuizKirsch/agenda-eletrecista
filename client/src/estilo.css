@@ -259,6 +259,16 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   box-shadow: var(--sombra);
 }
 .modal::backdrop { background: rgba(39, 49, 61, .4); }
+.modal, .modal::backdrop { transition: transform .2s ease, opacity .2s ease, overlay .2s allow-discrete, display .2s allow-discrete; }
+.modal { transform: translateX(100%); }
+.modal::backdrop { opacity: 0; }
+.modal[open] { transform: none; }
+.modal[open]::backdrop { opacity: 1; }
+@starting-style {
+  .modal[open] { transform: translateX(100%); }
+  .modal[open]::backdrop { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .modal, .modal::backdrop { transition: none; } }
 .modal > * + * { margin-top: 16px; }
 .modal > .cabecalho {
   position: sticky;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { fecharAoClicarFora } from '../agenda/Modal';
+import { aposAnimacao, fecharAoClicarFora } from '../agenda/Modal';
 
 export default function TiposAtividade({ mensagem = '', onFechar }) {
   const dialogRef = useRef(null);
@@ -63,7 +63,7 @@ export default function TiposAtividade({ mensagem = '', onFechar }) {
   }
 
   return (
-    <dialog ref={dialogRef} className="modal" onClose={onFechar} onClick={fecharAoClicarFora} aria-labelledby="titulo-tipos">
+    <dialog ref={dialogRef} className="modal" onClose={aposAnimacao(onFechar)} onClick={fecharAoClicarFora} aria-labelledby="titulo-tipos">
       <div className="cabecalho">
         <h2 id="titulo-tipos">Tipos de atividade</h2>
         <button type="button" onClick={() => dialogRef.current.close()}>Fechar</button>
