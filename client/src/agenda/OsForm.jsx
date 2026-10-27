@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { hoje, paraHora, paraMin } from '../datas';
 import { formatarDataHora, formatarEndereco } from '../formato';
+import { IconeLixo, IconeMais } from '../icones';
 import Modal from './Modal';
 
 // Fim = início + duração padrão do tipo (RF 1.8, RN 2)
@@ -111,12 +112,22 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   }
 
   return (
-    <Modal titulo={titulo} onFechar={onFechar}>
+    <Modal
+      titulo={titulo}
+      largo
+      onFechar={onFechar}
+      rodape={(fechar) => (
+        <>
+          <button type="button" onClick={fechar}>Cancelar</button>
+          <button className="primario" form="form-os" disabled={enviando || !tipos}>{enviando ? 'Salvando…' : osId ? 'Salvar OS' : 'Criar OS'}</button>
+        </>
+      )}
+    >
       {!tipos && !erro && <p className="carregando">Carregando…</p>}
       {tipos && (
-        <form className="cartao" onSubmit={salvar}>
+        <form id="form-os" className="campos" onSubmit={salvar}>
           <label>
-            Cliente *
+            Cliente
             <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} required>
               <option value="" disabled>Selecione</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
@@ -124,7 +135,7 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
           </label>
 
           <label>
-            Endereço
+            <span>Endereço <span className="opcional">(opcional)</span></span>
             <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId}>
               <option value="">Sem endereço</option>
               {enderecos.map((en) => (
@@ -134,48 +145,52 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
           </label>
 
           {observacoesEndereco.length > 0 && (
-            <div>
-              <div className="rotulo">Observações do endereço</div>
-              <ul className="lista">
+            <details className="obs-endereco" open>
+              <summary>{observacoesEndereco.length === 1 ? '1 observação deste endereço' : `${observacoesEndereco.length} observações deste endereço`}</summary>
+              <ul>
                 {observacoesEndereco.map((o) => (
-                  <li key={o.id}>
-                    <span>{formatarDataHora(o.criado_em)}</span>
-                    <p className="texto">{o.texto}</p>
-                  </li>
+                  <li key={o.id}>{o.texto} <time dateTime={o.criado_em}>· {formatarDataHora(o.criado_em)}</time></li>
                 ))}
               </ul>
-            </div>
+            </details>
           )}
 
-          <div>
-            <div className="rotulo">Atividades *</div>
+          <div className="grupo-atividades">
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Atividades</span>
             {linhas.map((l, i) => (
-              <div key={l.chave} className="linha-atividade">
-                <select
-                  aria-label={`Tipo (${i + 1}ª atividade)`}
-                  value={l.tipo_atividade_id}
-                  onChange={(e) => alterarLinha(l.chave, { tipo_atividade_id: e.target.value })}
-                  required
-                >
-                  {tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => (
-                    <option key={t.id} value={t.id}>{t.nome}{t.ativo ? '' : ' (inativo)'}</option>
-                  ))}
-                </select>
-                <input type="date" aria-label={`Data (${i + 1}ª atividade)`} value={l.data} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required />
-                <input type="time" aria-label={`Início (${i + 1}ª atividade)`} value={l.hora_inicio} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required />
-                <input type="time" aria-label={`Fim (${i + 1}ª atividade)`} value={l.hora_fim} onChange={(e) => alterarLinha(l.chave, { hora_fim: e.target.value })} required />
-                {linhas.length > 1 && (
-                  <button type="button" className="perigo" aria-label={`Remover ${i + 1}ª atividade`} onClick={() => setLinhas(linhas.filter((x) => x.chave !== l.chave))}>✕</button>
-                )}
+              <div key={l.chave} className="card-atividade">
+                <div className="tipo">
+                  <span className="numero">{i + 1}</span>
+                  <select
+                    aria-label={`Tipo (${i + 1}ª atividade)`}
+                    value={l.tipo_atividade_id}
+                    onChange={(e) => alterarLinha(l.chave, { tipo_atividade_id: e.target.value })}
+                    required
+                  >
+                    {tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => (
+                      <option key={t.id} value={t.id}>{t.nome} · {t.duracao_padrao_min} min{t.ativo ? '' : ' (inativo)'}</option>
+                    ))}
+                  </select>
+                  {linhas.length > 1 && (
+                    <button type="button" className="icone-botao discreto perigo" aria-label={`Remover ${i + 1}ª atividade`} onClick={() => setLinhas(linhas.filter((x) => x.chave !== l.chave))}>
+                      <IconeLixo />
+                    </button>
+                  )}
+                </div>
+                <label className="data">Data<input type="date" value={l.data} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required /></label>
+                <label>Início<input type="time" value={l.hora_inicio} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required /></label>
+                <label>Fim<input type="time" value={l.hora_fim} onChange={(e) => alterarLinha(l.chave, { hora_fim: e.target.value })} required /></label>
               </div>
             ))}
-            <button type="button" className="adicionar-linha" onClick={adicionarLinha}>+ Adicionar atividade</button>
+            <button type="button" className="tracejado" onClick={adicionarLinha}><IconeMais />Adicionar atividade</button>
           </div>
 
-          <label>Observações<textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={3} /></label>
+          <label>
+            <span>Observações da OS <span className="opcional">(opcional)</span></span>
+            <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={3} placeholder="O que o cliente relatou" />
+          </label>
 
           {erro && <p className="erro" role="alert">{erro}</p>}
-          <button className="primario" disabled={enviando}>{enviando ? 'Salvando…' : osId ? 'Salvar OS' : 'Criar OS'}</button>
         </form>
       )}
       {!tipos && erro && <p className="erro" role="alert">{erro}</p>}

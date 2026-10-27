@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import Modal from './Modal';
 
+// RF 6.9 / RN 8: muda só data e horário desta atividade
 export default function RemarcarAtividade({ atividade, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -25,17 +26,22 @@ export default function RemarcarAtividade({ atividade, onFechar, onSalvo }) {
   return (
     <Modal
       titulo="Remarcar atividade"
-      subtitulo={`${atividade.tipo.nome} — OS ${atividade.os_id}. Muda só esta atividade; cliente, endereço e as demais atividades da OS não são afetados.`}
+      subtitulo={`${atividade.tipo.nome} · OS ${atividade.os_id}`}
+      variante="dialogo"
       onFechar={onFechar}
+      rodape={(fechar) => (
+        <>
+          <button type="button" onClick={fechar}>Cancelar</button>
+          <button className="primario" form="form-remarcar" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar'}</button>
+        </>
+      )}
     >
-      <form className="cartao" onSubmit={salvar}>
-        <label>Data *<input name="data" type="date" defaultValue={atividade.data} required /></label>
-        <div className="lado-a-lado">
-          <label>Início *<input name="inicio" type="time" defaultValue={atividade.hora_inicio} required /></label>
-          <label>Fim *<input name="fim" type="time" defaultValue={atividade.hora_fim} required /></label>
-        </div>
+      <form id="form-remarcar" className="campos" onSubmit={salvar}>
+        <label className="c2">Data<input name="data" type="date" defaultValue={atividade.data} required /></label>
+        <label className="c2 meia">Início<input name="inicio" type="time" defaultValue={atividade.hora_inicio} required /></label>
+        <label className="c2 meia">Fim<input name="fim" type="time" defaultValue={atividade.hora_fim} required /></label>
+        <p className="suave" style={{ fontSize: 13 }}>Só esta atividade muda. Cliente, endereço e as demais atividades da OS continuam iguais. Para trocar o tipo, use "Editar OS".</p>
         {erro && <p className="erro" role="alert">{erro}</p>}
-        <button className="primario" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar novo horário'}</button>
       </form>
     </Modal>
   );

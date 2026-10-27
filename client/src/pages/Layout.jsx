@@ -1,45 +1,50 @@
-import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth';
-import TiposAtividade from './TiposAtividade';
+import {
+  IconeAgenda, IconeClientes, IconeRaio, IconeSair, IconeTipos, IconeUsuario, iniciais,
+} from '../icones';
 
-const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
+export const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
 
 export default function Layout() {
   const { usuario, logout } = useAuth();
   const { pathname } = useLocation();
-  const [tipos, setTipos] = useState(null);
-  const [versaoTipos, setVersaoTipos] = useState(0);
-  const abrirTipos = (mensagem = '') => setTipos({ mensagem });
-
-  function fecharTipos() {
-    setTipos(null);
-    setVersaoTipos((v) => v + 1);
-  }
 
   return (
     <>
       <aside className="lateral">
-        <div className="marca">
-          <strong>⚡ Agenda</strong>
-        </div>
-        <nav>
-          <NavLink to="/agenda"><i>01</i>Agenda</NavLink>
-          <NavLink to="/clientes"><i>02</i>Clientes</NavLink>
-          <button type="button" className={tipos ? 'active' : undefined} onClick={() => abrirTipos()}><i>03</i>Tipos de Atividade</button>
-          <NavLink to="/usuarios"><i>04</i>Usuários</NavLink>
-          <button type="button" className="sair-celular" onClick={logout}><i>—</i>Sair</button>
+        <div className="marca"><span className="marca-icone"><IconeRaio /></span>Agenda</div>
+        <nav aria-label="Menu principal">
+          <NavLink to="/agenda"><IconeAgenda />Agenda</NavLink>
+          <NavLink to="/clientes"><IconeClientes />Clientes</NavLink>
+          <NavLink to="/tipos-atividade"><IconeTipos /><span className="rotulo-menu">Tipos<span className="so-computador"> de atividade</span></span></NavLink>
+          <NavLink to="/usuarios"><IconeUsuario />Usuários</NavLink>
         </nav>
         <div className="quem">
-          <strong>{usuario.nome}</strong>
-          <span>{PERFIS[usuario.perfil]}</span>
-          <button type="button" onClick={logout}>Sair</button>
+          <span className="avatar destaque">{iniciais(usuario.nome)}</span>
+          <div>
+            <strong>{usuario.nome}</strong>
+            <span>{PERFIS[usuario.perfil]}</span>
+          </div>
+          <button type="button" className="icone-botao discreto" aria-label="Sair" onClick={logout}><IconeSair /></button>
         </div>
       </aside>
+
+      {/* celular: marca e conta no topo; o menu fica na barra inferior */}
+      <header className="topo-celular">
+        <div className="marca"><span className="marca-icone"><IconeRaio /></span>Agenda</div>
+        <details>
+          <summary aria-label={`Conta de ${usuario.nome}`}><span className="avatar destaque">{iniciais(usuario.nome)}</span></summary>
+          <div className="menu-conta">
+            <div><strong>{usuario.nome}</strong><div className="suave">{PERFIS[usuario.perfil]}</div></div>
+            <button type="button" onClick={logout}><IconeSair />Sair</button>
+          </div>
+        </details>
+      </header>
+
       <main className={pathname.startsWith('/agenda') ? 'conteudo largo' : 'conteudo'}>
-        <Outlet context={{ abrirTipos, versaoTipos }} />
+        <Outlet />
       </main>
-      {tipos && <TiposAtividade mensagem={tipos.mensagem} onFechar={fecharTipos} />}
     </>
   );
 }

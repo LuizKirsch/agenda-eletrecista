@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../api';
+import Modal from '../agenda/Modal';
 
-export default function ClienteNovo() {
+export default function ClienteNovo({ onFechar }) {
   const navigate = useNavigate();
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -21,14 +22,22 @@ export default function ClienteNovo() {
   }
 
   return (
-    <>
-      <h1>Novo cliente</h1>
-      <form className="cartao" onSubmit={salvar}>
-        <label>Nome *<input name="nome" maxLength={120} required /></label>
-        <label>Telefone *<input name="telefone" type="tel" maxLength={20} required /></label>
+    <Modal
+      titulo="Novo cliente"
+      variante="dialogo"
+      onFechar={onFechar}
+      rodape={(fechar) => (
+        <>
+          <button type="button" onClick={fechar}>Cancelar</button>
+          <button className="primario" form="form-cliente" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar cliente'}</button>
+        </>
+      )}
+    >
+      <form id="form-cliente" className="campos" onSubmit={salvar}>
+        <label className="c4">Nome<input name="nome" maxLength={120} required autoFocus /></label>
+        <label className="c2">Telefone<input name="telefone" type="tel" maxLength={20} required /></label>
         {erro && <p className="erro" role="alert">{erro}</p>}
-        <button className="primario" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar'}</button>
       </form>
-    </>
+    </Modal>
   );
 }

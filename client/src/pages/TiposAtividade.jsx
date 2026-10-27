@@ -1,16 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router';
 import { api } from '../api';
-import { aposAnimacao, fecharAoClicarFora } from '../agenda/Modal';
+import Modal from '../agenda/Modal';
+import { IconeEditar, IconeLixo, IconeMais } from '../icones';
 
-export default function TiposAtividade({ mensagem = '', onFechar }) {
-  const dialogRef = useRef(null);
+const duracao = (min) => (min % 60 === 0 ? `${min / 60} h` : min > 60 ? `${Math.floor(min / 60)} h ${min % 60} min` : `${min} min`);
+const uso = (n) => (n === 0 ? 'nenhuma' : n === 1 ? '1 atividade' : `${n} atividades`);
+
+// Página de tipos de atividade (RF 5.1 a 5.8). A agenda redireciona para cá, com uma mensagem,
+// quando não há tipo ativo para criar uma OS (RF 5.8).
+export default function TiposAtividade() {
+  const { state } = useLocation();
   const [tipos, setTipos] = useState(null);
-  const [editandoId, setEditandoId] = useState(null);
-  const [erro, setErro] = useState(mensagem);
+  const [form, setForm] = useState(null); // null | { tipo?: {...} }
+  const [erro, setErro] = useState(state?.mensagem ?? '');
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => {
-    dialogRef.current.showModal();
     api('/tipos-atividade').then(setTipos).catch((err) => setErro(err.message));
   }, []);
 
@@ -27,31 +33,9 @@ export default function TiposAtividade({ mensagem = '', onFechar }) {
   }
 
   const substituir = (tipo) => setTipos((lista) => lista.map((t) => (t.id === tipo.id ? tipo : t)));
-  const lerForm = (form) => ({ nome: form.elements.nome.value, duracao_padrao_min: Number(form.elements.duracao.value) });
-
-  function adicionar(e) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    executar(async () => {
-      const tipo = await api('/tipos-atividade', { method: 'POST', body: lerForm(form) });
-      setTipos((lista) => [...lista, tipo]);
-      form.reset();
-    });
-  }
-
-  function salvarEdicao(e) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    executar(async () => {
-      substituir(await api(`/tipos-atividade/${editandoId}`, { method: 'PUT', body: lerForm(form) }));
-      setEditandoId(null);
-    });
-  }
 
   function alternarSituacao(t) {
-    executar(async () => {
-      substituir(await api(`/tipos-atividade/${t.id}/situacao`, { method: 'PATCH', body: { ativo: !t.ativo } }));
-    });
+    executar(async () => substituir(await api(`/tipos-atividade/${t.id}/situacao`, { method: 'PATCH', body: { ativo: !t.ativo } })));
   }
 
   function excluir(t) {
@@ -63,24 +47,18 @@ export default function TiposAtividade({ mensagem = '', onFechar }) {
   }
 
   return (
-    <dialog ref={dialogRef} className="modal" onClose={aposAnimacao(onFechar)} onClick={fecharAoClicarFora} aria-labelledby="titulo-tipos">
+    <>
       <div className="cabecalho">
-        <h2 id="titulo-tipos">Tipos de atividade</h2>
-        <button type="button" onClick={() => dialogRef.current.close()}>Fechar</button>
+        <div>
+          <h1>Tipos de atividade</h1>
+          <p className="suave">Serviços que o eletricista faz. A duração padrão preenche o fim da atividade ao criar uma OS.</p>
+        </div>
+        <button type="button" className="primario" onClick={() => setForm({})}><IconeMais />Novo tipo</button>
       </div>
 
-      <form className="cartao" onSubmit={adicionar}>
-        <label>Nome *<input name="nome" maxLength={100} required /></label>
-        <label>Duração padrão (min) *<input name="duracao" type="number" inputMode="numeric" min={5} max={720} step={1} required /></label>
-        <button className="primario" disabled={ocupado}>Adicionar</button>
-      </form>
-
-      {erro && <p className="erro" role="alert">{erro}</p>}
+      {erro && !form && <p className="erro" role="alert" style={{ marginBottom: 16 }}>{erro}</p>}
       {tipos === null && !erro && <p className="carregando">Carregando…</p>}
       {tipos?.length === 0 && <p className="vazio">Nenhum tipo de atividade cadastrado.</p>}
-
-      {/* inputs da linha em edição apontam para este form via atributo form= */}
-      <form id="form-editar-tipo" onSubmit={salvarEdicao} />
 
       {tipos?.length > 0 && (
         <div className="tabela">
@@ -88,44 +66,89 @@ export default function TiposAtividade({ mensagem = '', onFechar }) {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Duração (min)</th>
-                <th>Uso em OS</th>
+                <th>Duração</th>
+                <th>Uso</th>
                 <th>Situação</th>
-                <th>Ações</th>
+                <th><span className="so-leitor">Ações</span></th>
               </tr>
             </thead>
             <tbody>
-              {tipos.map((t) => (editandoId === t.id ? (
-                <tr key={t.id}>
-                  <td><input form="form-editar-tipo" name="nome" aria-label="Nome" maxLength={100} defaultValue={t.nome} required /></td>
-                  <td>
-                    <input form="form-editar-tipo" name="duracao" aria-label="Duração padrão (min)" type="number" inputMode="numeric"
-                      min={5} max={720} step={1} defaultValue={t.duracao_padrao_min} required />
-                  </td>
-                  <td>{t.uso}</td>
-                  <td>{t.ativo ? 'Ativo' : 'Inativo'}</td>
-                  <td className="acoes">
-                    <button form="form-editar-tipo" disabled={ocupado}>Salvar</button>
-                    <button type="button" onClick={() => setEditandoId(null)}>Cancelar</button>
-                  </td>
-                </tr>
-              ) : (
+              {tipos.map((t) => (
                 <tr key={t.id} className={t.ativo ? undefined : 'inativo'}>
-                  <td>{t.nome}</td>
-                  <td>{t.duracao_padrao_min}</td>
-                  <td>{t.uso}</td>
-                  <td>{t.ativo ? 'Ativo' : 'Inativo'}</td>
+                  <td><span className="nome">{t.nome}</span></td>
+                  <td>{duracao(t.duracao_padrao_min)}</td>
+                  <td data-rotulo="Uso">{uso(t.uso)}</td>
+                  <td><span className={`badge ${t.ativo ? 'ativo' : 'inativo'}`}>{t.ativo ? 'Ativo' : 'Inativo'}</span></td>
                   <td className="acoes">
-                    <button type="button" disabled={ocupado} onClick={() => { setErro(''); setEditandoId(t.id); }}>Editar</button>
-                    <button type="button" disabled={ocupado} onClick={() => alternarSituacao(t)}>{t.ativo ? 'Desativar' : 'Reativar'}</button>
-                    {t.uso === 0 && <button type="button" className="perigo" disabled={ocupado} onClick={() => excluir(t)}>Excluir</button>}
+                    <button type="button" className="icone-botao discreto" aria-label={`Editar ${t.nome}`} disabled={ocupado} onClick={() => { setErro(''); setForm({ tipo: t }); }}><IconeEditar /></button>
+                    <button type="button" className="discreto" disabled={ocupado} onClick={() => alternarSituacao(t)}>{t.ativo ? 'Desativar' : 'Reativar'}</button>
+                    {t.uso === 0 && (
+                      <button type="button" className="icone-botao discreto perigo" aria-label={`Excluir ${t.nome}`} disabled={ocupado} onClick={() => excluir(t)}><IconeLixo /></button>
+                    )}
                   </td>
                 </tr>
-              )))}
+              ))}
             </tbody>
           </table>
         </div>
       )}
-    </dialog>
+
+      {form && (
+        <FormTipo
+          tipo={form.tipo}
+          onFechar={() => setForm(null)}
+          onSalvo={(salvo) => {
+            setTipos((lista) => (form.tipo ? lista.map((t) => (t.id === salvo.id ? salvo : t)) : [...lista, salvo]));
+            setForm(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function FormTipo({ tipo, onFechar, onSalvo }) {
+  const [erro, setErro] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  async function salvar(e) {
+    e.preventDefault();
+    const { nome, duracao: dur } = e.currentTarget.elements;
+    const body = { nome: nome.value, duracao_padrao_min: Number(dur.value) };
+    setErro('');
+    setEnviando(true);
+    try {
+      onSalvo(await api(tipo ? `/tipos-atividade/${tipo.id}` : '/tipos-atividade', { method: tipo ? 'PUT' : 'POST', body }));
+    } catch (err) {
+      setErro(err.message);
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <Modal
+      titulo={tipo ? 'Editar tipo de atividade' : 'Novo tipo de atividade'}
+      variante="dialogo"
+      onFechar={onFechar}
+      rodape={(fechar) => (
+        <>
+          <button type="button" onClick={fechar}>Cancelar</button>
+          <button className="primario" form="form-tipo" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar'}</button>
+        </>
+      )}
+    >
+      <form id="form-tipo" className="campos" onSubmit={salvar}>
+        <label>Nome<input name="nome" maxLength={100} defaultValue={tipo?.nome} required autoFocus /></label>
+        <label className="c3 meia">
+          Duração padrão (min)
+          <input name="duracao" type="number" inputMode="numeric" min={5} max={720} step={1} defaultValue={tipo?.duracao_padrao_min} required />
+          <span className="dica">De 5 a 720 minutos</span>
+        </label>
+        {tipo && tipo.uso > 0 && (
+          <p className="alerta"><span>Usado em {uso(tipo.uso)}. Mudar a duração não altera o que já foi agendado.</span></p>
+        )}
+        {erro && <p className="erro" role="alert">{erro}</p>}
+      </form>
+    </Modal>
   );
 }

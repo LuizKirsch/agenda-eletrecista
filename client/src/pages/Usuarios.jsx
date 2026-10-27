@@ -1,26 +1,20 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
-
-const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
+import Modal from '../agenda/Modal';
+import { IconeEditar, IconeLixo, IconeMais, iniciais } from '../icones';
+import { PERFIS } from './Layout';
 
 export default function Usuarios() {
   const { usuario: logado } = useAuth();
   const ehSecretaria = logado.perfil === 'secretaria'; // editar/excluir: só a secretária
   const [usuarios, setUsuarios] = useState([]);
-  const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState(null); // null | { usuario?: {...} }
   const [erro, setErro] = useState('');
-  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     api('/usuarios').then(setUsuarios).catch((err) => setErro(err.message));
   }, []);
-
-  function editar(u) {
-    setErro('');
-    setEditando(u);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  }
 
   async function excluir(u) {
     if (!window.confirm(`Excluir ${u.nome}?`)) return;
@@ -28,78 +22,123 @@ export default function Usuarios() {
     try {
       await api(`/usuarios/${u.id}`, { method: 'DELETE' });
       setUsuarios((lista) => lista.filter((x) => x.id !== u.id));
-      if (editando?.id === u.id) setEditando(null);
     } catch (err) {
       setErro(err.message);
     }
   }
 
+  function salvo(u) {
+    setUsuarios((lista) => (form.usuario ? lista.map((x) => (x.id === u.id ? u : x)) : [...lista, u]));
+    setForm(null);
+  }
+
+  return (
+    <>
+      <div className="cabecalho">
+        <div>
+          <h1>Usuários</h1>
+          <p className="suave">Quem tem acesso ao sistema.</p>
+        </div>
+        <button type="button" className="primario" onClick={() => setForm({})}><IconeMais />Novo usuário</button>
+      </div>
+
+      {erro && <p className="erro" role="alert" style={{ marginBottom: 16 }}>{erro}</p>}
+
+      {usuarios.length > 0 && (
+        <div className="tabela">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Login</th>
+                <th>Perfil</th>
+                <th><span className="so-leitor">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {usuarios.map((u) => (
+                <tr key={u.id} className={u.ativo ? undefined : 'inativo'}>
+                  <td>
+                    <span className="nome">
+                      <span className="avatar">{iniciais(u.nome)}</span>
+                      {u.nome}
+                      {u.id === logado.id && <span className="suave" style={{ fontWeight: 400, fontSize: 12 }}>(você)</span>}
+                    </span>
+                  </td>
+                  <td className="suave">{u.login}</td>
+                  <td>
+                    <span className={`badge ${u.perfil}`}>{PERFIS[u.perfil]}</span>
+                    {!u.ativo && <> <span className="badge inativo">Inativo</span></>}
+                  </td>
+                  <td className="acoes">
+                    {ehSecretaria && (
+                      <>
+                        <button type="button" className="icone-botao discreto" aria-label={`Editar ${u.nome}`} onClick={() => { setErro(''); setForm({ usuario: u }); }}><IconeEditar /></button>
+                        {u.id !== logado.id && (
+                          <button type="button" className="icone-botao discreto perigo" aria-label={`Excluir ${u.nome}`} onClick={() => excluir(u)}><IconeLixo /></button>
+                        )}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {form && <FormUsuario editando={form.usuario} proprio={form.usuario?.id === logado.id} onFechar={() => setForm(null)} onSalvo={salvo} />}
+    </>
+  );
+}
+
+function FormUsuario({ editando, proprio, onFechar, onSalvo }) {
+  const [erro, setErro] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
   async function salvar(e) {
     e.preventDefault();
-    const form = e.currentTarget;
-    const { nome, login, senha, perfil, ativo } = form.elements;
+    const { nome, login, senha, perfil, ativo } = e.currentTarget.elements;
     const body = { nome: nome.value, login: login.value, senha: senha.value, perfil: perfil.value };
     setErro('');
     setEnviando(true);
     try {
-      if (editando) {
-        const salvo = await api(`/usuarios/${editando.id}`, { method: 'PUT', body: { ...body, ativo: ativo.checked } });
-        setUsuarios((lista) => lista.map((x) => (x.id === salvo.id ? salvo : x)));
-        setEditando(null);
-      } else {
-        const novo = await api('/usuarios', { method: 'POST', body });
-        setUsuarios((lista) => [...lista, novo]);
-        form.reset();
-      }
+      onSalvo(editando
+        ? await api(`/usuarios/${editando.id}`, { method: 'PUT', body: { ...body, ativo: ativo.checked } })
+        : await api('/usuarios', { method: 'POST', body }));
     } catch (err) {
       setErro(err.message);
-    } finally {
       setEnviando(false);
     }
   }
 
-  const proprio = editando?.id === logado.id;
-
   return (
-    <>
-      <h1>Usuários</h1>
-      <ul className="lista">
-        {usuarios.map((u) => (
-          <li key={u.id}>
-            <strong>{u.nome}</strong>
-            <span>{u.login} · {PERFIS[u.perfil]}{!u.ativo && ' · Inativo'}</span>
-            {ehSecretaria && (
-              <div className="acoes">
-                <button type="button" onClick={() => editar(u)}>Editar</button>
-                {u.id !== logado.id && <button type="button" className="perigo" onClick={() => excluir(u)}>Excluir</button>}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <h2>{editando ? `Editar ${editando.nome}` : 'Cadastrar usuário'}</h2>
-      {/* key: remonta o formulário ao trocar de usuário, recarregando os defaultValue */}
-      <form key={editando?.id ?? 'novo'} className="cartao" onSubmit={salvar}>
-        <label>Nome<input name="nome" maxLength={100} defaultValue={editando?.nome} required /></label>
-        <label>Login<input name="login" maxLength={60} defaultValue={editando?.login} autoComplete="off" autoCapitalize="none" required /></label>
-        <label>
-          Senha
-          <input
-            name="senha"
-            type="password"
-            autoComplete="new-password"
-            required={!editando}
-            placeholder={editando ? 'Deixe em branco para manter' : undefined}
-          />
-        </label>
-        <label>
+    <Modal
+      titulo={editando ? `Editar ${editando.nome}` : 'Novo usuário'}
+      variante="dialogo"
+      onFechar={onFechar}
+      rodape={(fechar) => (
+        <>
+          <button type="button" onClick={fechar}>Cancelar</button>
+          <button className="primario" form="form-usuario" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar usuário'}</button>
+        </>
+      )}
+    >
+      <form id="form-usuario" className="campos" onSubmit={salvar}>
+        <label>Nome<input name="nome" maxLength={100} defaultValue={editando?.nome} required autoFocus /></label>
+        <label className="c3">Login<input name="login" maxLength={60} defaultValue={editando?.login} autoComplete="off" autoCapitalize="none" required /></label>
+        <label className="c3">
           Perfil
           <select name="perfil" required defaultValue={editando?.perfil ?? ''} disabled={proprio}>
             <option value="" disabled>Selecione</option>
             <option value="eletricista">Eletricista</option>
             <option value="secretaria">Secretária</option>
           </select>
+        </label>
+        <label>
+          Senha
+          <input name="senha" type="password" autoComplete="new-password" required={!editando} />
+          {editando && <span className="dica">Deixe em branco para manter a senha atual.</span>}
         </label>
         {editando && (
           <label className="checkbox">
@@ -108,9 +147,7 @@ export default function Usuarios() {
           </label>
         )}
         {erro && <p className="erro" role="alert">{erro}</p>}
-        <button className="primario" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar'}</button>
-        {editando && <button type="button" onClick={() => setEditando(null)}>Cancelar</button>}
       </form>
-    </>
+    </Modal>
   );
 }

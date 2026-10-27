@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { dataBr, nomeDia } from '../datas';
 import { formatarEndereco } from '../formato';
+import {
+  IconeAgenda, IconeAlerta, IconeBalao, IconeCheck, IconeLixo, IconeLocal, IconeMais, iniciais,
+} from '../icones';
 import Modal from './Modal';
 
 export const NOME_STATUS = { agendada: 'Agendada', concluida: 'Concluída', cancelada: 'Cancelada' };
+
+// Status da OS para o cabeçalho: agendada se ainda houver alguma atividade agendada
+const statusDaOs = (atividades) => (atividades.some((x) => x.status === 'agendada')
+  ? 'agendada'
+  : atividades.every((x) => x.status === 'cancelada') ? 'cancelada' : 'concluida');
 
 // Abre a OS com uma atividade selecionada; tocar em outra atividade da lista troca a seleção.
 export default function DetalheAtividade({
@@ -39,79 +47,92 @@ export default function DetalheAtividade({
     );
   }
 
-  const status = (s) => <span className={`pilula ${s}`}>{NOME_STATUS[s]}</span>;
   const selecionada = { ...a, os_id: os.id };
+  const statusOs = statusDaOs(os.atividades);
+  const mudarStatus = (status) => executar(`/atividades-os/${a.id}/status`, { method: 'PATCH', body: { status } });
 
   return (
-    <Modal titulo={`OS ${os.id}`} subtitulo={`${os.cliente.nome} · ${os.cliente.telefone}`} onFechar={onFechar}>
-      <dl className="detalhes">
-        <dt>Endereço</dt><dd>{os.endereco ? formatarEndereco(os.endereco) : '—'}</dd>
-        {os.observacao && <><dt>Observações</dt><dd className="texto">{os.observacao}</dd></>}
-      </dl>
-
-      <div>
-        <div className="rotulo">Atividades desta OS</div>
-        <ul className="mini-lista">
-          {os.atividades.map((x) => (
-            <li key={x.id} className={x.id === a.id ? 'atual' : undefined}>
-              <button type="button" aria-pressed={x.id === a.id} onClick={() => { setErro(''); setSelecionadaId(x.id); }}>
-                <span>
-                  {x.sequencia}. {x.tipo.nome} <small>{dataBr(x.data)} {x.hora_inicio}–{x.hora_fim}</small>
-                </span>
-                {status(x.status)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="selecionada">
-        <div className="rotulo">{a.sequencia}ª atividade · {a.tipo.nome} {status(a.status)}</div>
-        {a.conflito && <p className="erro">Este horário conflita com outra atividade no mesmo dia.</p>}
-        <dl className="detalhes">
-          <dt>Data</dt><dd>{nomeDia(a.data)} {dataBr(a.data)}</dd>
-          <dt>Horário</dt><dd>{a.hora_inicio} – {a.hora_fim}</dd>
-        </dl>
-        <div className="acoes-detalhe">
-          {a.status === 'agendada' ? (
-            <>
-              <button type="button" disabled={ocupado} onClick={() => onRemarcar(selecionada)}>Remarcar só esta atividade</button>
-              <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Remarcar a OS inteira</button>
-              <button type="button" disabled={ocupado} onClick={() => executar(`/atividades-os/${a.id}/status`, { method: 'PATCH', body: { status: 'concluida' } })}>
-                Concluir esta atividade
-              </button>
-              <button type="button" className="perigo" disabled={ocupado} onClick={() => executar(`/atividades-os/${a.id}/status`, { method: 'PATCH', body: { status: 'cancelada' } })}>
-                Cancelar esta atividade
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Editar a OS inteira</button>
-              <button type="button" className="perigo" disabled={ocupado} onClick={() => executar(`/atividades-os/${a.id}`, { method: 'DELETE' })}>
-                Excluir esta atividade
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {erro && <p className="erro" role="alert">{erro}</p>}
-
-      <div className="acoes-os">
-        <div className="rotulo">Ações da OS inteira</div>
-        <div className="acoes-detalhe">
-          <button type="button" disabled={ocupado} onClick={onAdicionarAtividade}>Adicionar atividade</button>
-          <button type="button" disabled={ocupado} onClick={() => executar(`/os/${os.id}/concluir`, { method: 'POST' })}>Concluir OS</button>
+    <Modal
+      titulo={<>OS {os.id} <span className={`pilula ${statusOs}`} style={{ marginLeft: 6 }}>{NOME_STATUS[statusOs]}</span></>}
+      subtitulo="Ordem de serviço"
+      onFechar={onFechar}
+      rodape={
+        <>
           <button
             type="button"
-            className="perigo"
+            className="discreto perigo esquerda"
             disabled={ocupado}
             onClick={() => window.confirm(`Excluir a OS ${os.id} e todas as suas atividades?`) && executar(`/os/${os.id}`, { method: 'DELETE' })}
           >
-            Excluir OS
+            <IconeLixo />Excluir OS
           </button>
+          <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Editar OS</button>
+          <button type="button" className="primario" disabled={ocupado} onClick={() => executar(`/os/${os.id}/concluir`, { method: 'POST' })}>
+            Concluir OS
+          </button>
+        </>
+      }
+    >
+      {a.conflito && a.status === 'agendada' && (
+        <p className="erro" role="alert" style={{ display: 'flex', gap: 10 }}>
+          <IconeAlerta tamanho={16} />
+          <span><strong>Conflito de horário.</strong> A atividade de {a.hora_inicio} se sobrepõe a outra no mesmo dia.</span>
+        </p>
+      )}
+
+      <section className="os-cliente">
+        <div className="quem">
+          <span className="avatar">{iniciais(os.cliente.nome)}</span>
+          <div>
+            <strong>{os.cliente.nome}</strong>
+            <span className="suave" style={{ fontSize: 13 }}>{os.cliente.telefone}</span>
+          </div>
         </div>
-      </div>
+        {os.endereco && (
+          <div className="linha-icone"><IconeLocal tamanho={16} /><span>{os.endereco.identificacao ? `${os.endereco.identificacao} · ` : ''}{formatarEndereco(os.endereco)}</span></div>
+        )}
+        {os.observacao && <div className="linha-icone nota"><IconeBalao tamanho={16} /><span>{os.observacao}</span></div>}
+      </section>
+
+      <section style={{ display: 'grid', gap: 10 }}>
+        <h3>Atividades <span className="contador">· {os.atividades.length}</span></h3>
+        <ul className="atividades">
+          {os.atividades.map((x) => {
+            const atual = x.id === a.id;
+            const classe = ['atividade', atual && 'atual', atual && x.conflito && x.status === 'agendada' && 'conflito'].filter(Boolean).join(' ');
+            return (
+              <li key={x.id} className={classe}>
+                <button type="button" aria-pressed={atual} onClick={() => { setErro(''); setSelecionadaId(x.id); }}>
+                  <span className="numero">{x.sequencia}</span>
+                  <span className="info">
+                    <strong>{x.tipo.nome}</strong>
+                    <small>{nomeDia(x.data).toLowerCase()}, {dataBr(x.data)} · {x.hora_inicio} – {x.hora_fim}</small>
+                  </span>
+                  <span className={`pilula ${x.status}`}>{NOME_STATUS[x.status]}</span>
+                </button>
+                {atual && (
+                  <div className="acoes-atividade">
+                    {x.status === 'agendada' ? (
+                      <>
+                        <button type="button" disabled={ocupado} onClick={() => onRemarcar(selecionada)}><IconeAgenda tamanho={15} />Remarcar</button>
+                        <button type="button" disabled={ocupado} onClick={() => mudarStatus('concluida')}><IconeCheck tamanho={15} />Concluir</button>
+                        <button type="button" className="discreto perigo" disabled={ocupado} onClick={() => mudarStatus('cancelada')}>Cancelar atividade</button>
+                      </>
+                    ) : (
+                      <button type="button" className="discreto perigo" disabled={ocupado} onClick={() => executar(`/atividades-os/${x.id}`, { method: 'DELETE' })}>
+                        <IconeLixo tamanho={15} />Excluir atividade
+                      </button>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <button type="button" className="tracejado" disabled={ocupado} onClick={onAdicionarAtividade}><IconeMais />Adicionar atividade</button>
+      </section>
+
+      {erro && <p className="erro" role="alert">{erro}</p>}
     </Modal>
   );
 }

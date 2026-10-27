@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
 import { useAuth } from '../auth';
+import { IconeRaio } from '../icones';
 
 export default function Login() {
   const { usuario, carregando, aviso, login } = useAuth();
@@ -26,9 +27,12 @@ export default function Login() {
   return (
     <main className="login">
       <form className="cartao" onSubmit={enviar}>
-        <div>
-          <h1>Agenda</h1>
-          <span className="sobretitulo">Agenda e OS</span>
+        <div className="marca">
+          <span className="marca-icone"><IconeRaio /></span>
+          <div>
+            <h1>Agenda</h1>
+            <p className="suave" style={{ fontSize: 13 }}>Agenda e ordens de serviço</p>
+          </div>
         </div>
         <label>
           Login
