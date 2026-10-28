@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth';
 import {
-  IconeAgenda, IconeClientes, IconeRaio, IconeSair, IconeTipos, IconeUsuario, iniciais,
+  IconeAgenda, IconeClientes, IconeOrcamento, IconeRaio, IconeSair, IconeTipos, IconeUsuario, iniciais,
 } from '../icones';
 
 export const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
@@ -17,6 +17,7 @@ export default function Layout() {
         <nav aria-label="Menu principal">
           <NavLink to="/agenda"><IconeAgenda />Agenda</NavLink>
           <NavLink to="/clientes"><IconeClientes />Clientes</NavLink>
+          <NavLink to="/orcamentos"><IconeOrcamento />Orçamentos</NavLink>
           <NavLink to="/tipos-atividade"><IconeTipos /><span className="rotulo-menu">Tipos<span className="so-computador"> de atividade</span></span></NavLink>
           <NavLink to="/usuarios"><IconeUsuario />Usuários</NavLink>
         </nav>

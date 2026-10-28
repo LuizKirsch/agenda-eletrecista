@@ -21,6 +21,7 @@ export const IconeLocal = (p) => <Icone {...p}><path d="M20 10c0 6-8 12-8 12S4 1
 export const IconeCasa = (p) => <Icone {...p}><path d="M3 10.5 12 3l9 7.5V21H3z" /><path d="M9 21v-6h6v6" /></Icone>;
 export const IconeBalao = (p) => <Icone {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Icone>;
 export const IconeCheck = (p) => <Icone {...p}><path d="M20 6 9 17l-5-5" /></Icone>;
+export const IconeOrcamento = (p) => <Icone {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></Icone>;
 export const IconeBusca = (p) => <Icone {...p}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></Icone>;
 
 // Iniciais para o avatar ("Roberto Lima" -> "RL")

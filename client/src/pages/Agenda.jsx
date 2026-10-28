@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { api } from '../api';
 import DetalheAtividade from '../agenda/DetalheAtividade';
 import Grade from '../agenda/Grade';
@@ -30,9 +30,10 @@ const SEM_TIPO_ATIVO = 'Não há tipos de atividade ativos. Cadastre ou reative 
 
 export default function Agenda() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const celular = useCelular();
   const abrirTipos = (mensagem) => navigate('/tipos-atividade', { state: { mensagem } });
-  const [segunda, setSegunda] = useState(() => segundaDe(hoje()));
+  const [segunda, setSegunda] = useState(() => segundaDe(state?.data ?? hoje()));
   const [atividades, setAtividades] = useState([]);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
