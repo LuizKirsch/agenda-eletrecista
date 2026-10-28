@@ -33,4 +33,15 @@ async function adicionarEndereco(req, res) {
   res.status(201).json(await clienteService.adicionarEndereco(req.params.id, lerCampos(req.body, CAMPOS_ENDERECO)));
 }
 
-module.exports = { listar, criar, detalhar, adicionarEndereco };
+async function atualizar(req, res) {
+  res.json(await clienteService.atualizar(req.params.id, lerCampos(req.body, CAMPOS_CLIENTE)));
+}
+
+async function excluir(req, res) {
+  await clienteService.excluir(req.params.id);
+  res.status(204).end();
+}
+
+module.exports = {
+  CAMPOS_ENDERECO, listar, criar, detalhar, adicionarEndereco, atualizar, excluir,
+};
