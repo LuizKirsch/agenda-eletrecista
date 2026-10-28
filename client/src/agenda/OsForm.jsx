@@ -13,14 +13,10 @@ function fimPara(inicio, tipo) {
 
 const SEM_TIPO_ATIVO = 'Não há tipos de atividade ativos. Cadastre ou reative um tipo para criar uma OS.';
 
-// RF 1.9: nova linha começa no fim da anterior, na mesma data
+// RF 1.9: nova linha começa no fim da anterior, na mesma data; o tipo fica para o usuário escolher
 function linhaApos(anterior, tipos, chave) {
-  const tipo = tipos.find((t) => t.ativo);
-  if (!tipo) return null;
-  return {
-    chave, tipo_atividade_id: String(tipo.id), data: anterior.data,
-    hora_inicio: anterior.hora_fim, hora_fim: fimPara(anterior.hora_fim, tipo),
-  };
+  if (!tipos.some((t) => t.ativo)) return null;
+  return { chave, tipo_atividade_id: '', data: anterior.data, hora_inicio: anterior.hora_fim, hora_fim: '' };
 }
 
 export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, onFechar, onSalvo }) {
@@ -32,6 +28,8 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   const [observacoesEndereco, setObservacoesEndereco] = useState([]);
   const [observacao, setObservacao] = useState('');
   const [linhas, setLinhas] = useState([]);
+  const [alterado, setAlterado] = useState(false);
+  const [orcamentoId, setOrcamentoId] = useState(null);
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const chave = useRef(0);
@@ -46,19 +44,21 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
         setTipos(listaTipos);
         if (os) {
           setClienteId(String(os.cliente.id));
+          setOrcamentoId(os.orcamento_id);
           setEnderecoId(os.endereco ? String(os.endereco.id) : '');
           setObservacao(os.observacao ?? '');
           const existentes = os.atividades.map((a) => ({
-            chave: novaChave(), id: a.id, tipoOriginal: a.tipo.id, tipo_atividade_id: String(a.tipo.id),
+            // atividade avulsa (item avulso do orçamento) não tem tipo e mantém a descrição (RF 6.3)
+            chave: novaChave(), id: a.id, tipoOriginal: a.tipo.id, tipo_atividade_id: a.tipo.id ? String(a.tipo.id) : '', avulsa: a.tipo.id ? null : a.tipo.nome,
             data: a.data, hora_inicio: a.hora_inicio, hora_fim: a.hora_fim,
+            // RN 9: concluída/cancelada fica só leitura na edição
+            encerrada: a.status === 'agendada' ? null : a.status, nome: a.tipo.nome,
           }));
           const nova = adicionarAtividade && linhaApos(existentes[existentes.length - 1], listaTipos, novaChave());
           setLinhas(nova ? [...existentes, nova] : existentes);
         } else {
-          const tipo = listaTipos.find((t) => t.ativo);
-          const inicio = hora ?? '08:00';
           setLinhas([{
-            chave: novaChave(), tipo_atividade_id: String(tipo.id), data: data ?? hoje(), hora_inicio: inicio, hora_fim: fimPara(inicio, tipo),
+            chave: novaChave(), tipo_atividade_id: '', data: data ?? hoje(), hora_inicio: hora ?? '08:00', hora_fim: '',
           }]);
         }
       })
@@ -89,7 +89,10 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
 
   function adicionarLinha() {
     const nova = linhaApos(linhas[linhas.length - 1], tipos, novaChave());
-    if (nova) setLinhas([...linhas, nova]);
+    if (nova) {
+      setLinhas([...linhas, nova]);
+      setAlterado(true);
+    }
     else setErro(SEM_TIPO_ATIVO);
   }
 
@@ -115,6 +118,7 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
     <Modal
       titulo={titulo}
       largo
+      confirmarSaida={alterado}
       onFechar={onFechar}
       rodape={(fechar) => (
         <>
@@ -125,13 +129,15 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
     >
       {!tipos && !erro && <p className="carregando">Carregando…</p>}
       {tipos && (
-        <form id="form-os" className="campos" onSubmit={salvar}>
+        <form id="form-os" className="campos" onSubmit={salvar} onChange={() => setAlterado(true)}>
           <label>
             Cliente
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} required>
+            {/* RN 57: OS gerada por orçamento não troca de cliente */}
+            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} disabled={!!orcamentoId} required>
               <option value="" disabled>Selecione</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
             </select>
+            {orcamentoId && <span className="dica">OS gerada pelo orçamento nº {orcamentoId}; o cliente não pode ser trocado.</span>}
           </label>
 
           <label>
@@ -161,25 +167,30 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
               <div key={l.chave} className="card-atividade">
                 <div className="tipo">
                   <span className="numero">{i + 1}</span>
-                  <select
-                    aria-label={`Tipo (${i + 1}ª atividade)`}
-                    value={l.tipo_atividade_id}
-                    onChange={(e) => alterarLinha(l.chave, { tipo_atividade_id: e.target.value })}
-                    required
-                  >
-                    {tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => (
-                      <option key={t.id} value={t.id}>{t.nome} · {t.duracao_padrao_min} min{t.ativo ? '' : ' (inativo)'}</option>
-                    ))}
-                  </select>
-                  {linhas.length > 1 && (
-                    <button type="button" className="icone-botao discreto perigo" aria-label={`Remover ${i + 1}ª atividade`} onClick={() => setLinhas(linhas.filter((x) => x.chave !== l.chave))}>
+                  {l.encerrada ? (
+                    <strong className="avulsa">{l.nome} <span className={`pilula ${l.encerrada}`}>{l.encerrada === 'concluida' ? 'Concluída' : 'Cancelada'}</span></strong>
+                  ) : l.avulsa ? <strong className="avulsa">{l.avulsa} <span className="badge inativo">avulsa</span></strong> : (
+                    <select
+                      aria-label={`Tipo (${i + 1}ª atividade)`}
+                      value={l.tipo_atividade_id}
+                      onChange={(e) => alterarLinha(l.chave, { tipo_atividade_id: e.target.value })}
+                      required
+                    >
+                      <option value="" disabled>Selecione a atividade</option>
+                      {tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => (
+                        <option key={t.id} value={t.id}>{t.nome} · {t.duracao_padrao_min} min{t.ativo ? '' : ' (inativo)'}</option>
+                      ))}
+                    </select>
+                  )}
+                  {linhas.length > 1 && !l.encerrada && (
+                    <button type="button" className="icone-botao discreto perigo" aria-label={`Remover ${i + 1}ª atividade`} onClick={() => { setLinhas(linhas.filter((x) => x.chave !== l.chave)); setAlterado(true); }}>
                       <IconeLixo />
                     </button>
                   )}
                 </div>
-                <label className="data">Data<input type="date" value={l.data} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required /></label>
-                <label>Início<input type="time" value={l.hora_inicio} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required /></label>
-                <label>Fim<input type="time" value={l.hora_fim} onChange={(e) => alterarLinha(l.chave, { hora_fim: e.target.value })} required /></label>
+                <label className="data">Data<input type="date" value={l.data} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required /></label>
+                <label>Início<input type="time" value={l.hora_inicio} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required /></label>
+                <label>Fim<input type="time" value={l.hora_fim} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { hora_fim: e.target.value })} required /></label>
               </div>
             ))}
             <button type="button" className="tracejado" onClick={adicionarLinha}><IconeMais />Adicionar atividade</button>
