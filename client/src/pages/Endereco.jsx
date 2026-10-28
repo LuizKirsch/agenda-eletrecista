@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
-import Modal from '../agenda/Modal';
+import Modal, { Confirmar } from '../agenda/Modal';
 import { formatarDataHora } from '../formato';
-import { IconeDireita, IconeInfo, IconeMais, iniciais } from '../icones';
+import {
+  IconeDireita, IconeEditar, IconeInfo, IconeLixo, IconeMais, iniciais,
+} from '../icones';
+import { FormEndereco } from './Cliente';
 
-// RF 3.16 / LGPD L4: aviso no campo de observação
+// RF 3.13 / LGPD L4: aviso no campo de observação
 const AVISO_LGPD = 'Anote só informações técnicas do imóvel (quadro, acesso, fiação). Não registre dados de saúde, idade ou outros dados pessoais dos moradores.';
 
 export default function Endereco() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [endereco, setEndereco] = useState(null);
   const [observacoes, setObservacoes] = useState([]);
   const [erroCarregar, setErroCarregar] = useState('');
-  const [registrando, setRegistrando] = useState(false);
+  // { tela: 'observacao', observacao? } | { tela: 'excluirObservacao', observacao } | { tela: 'editar' } | { tela: 'excluir' }
+  const [modal, setModal] = useState(null);
+  const fecharModal = () => setModal(null);
 
   useEffect(() => {
     Promise.all([api(`/enderecos/${id}`), api(`/enderecos/${id}/observacoes`)])
@@ -48,6 +54,13 @@ export default function Endereco() {
 
       <div className="colunas">
         <section className="cartao lado" aria-label="Dados do endereço">
+          <div className="cartao-cab">
+            <h2>Dados do endereço</h2>
+            <span className="acoes-icone">
+              <button type="button" className="icone-botao discreto" aria-label="Editar endereço" onClick={() => setModal({ tela: 'editar' })}><IconeEditar /></button>
+              <button type="button" className="icone-botao discreto perigo" aria-label="Excluir endereço" onClick={() => setModal({ tela: 'excluir' })}><IconeLixo /></button>
+            </span>
+          </div>
           <dl className="dados">
             <div className="inteiro"><dt>Logradouro</dt><dd>{[endereco.logradouro, endereco.numero].filter(Boolean).join(', ')}</dd></div>
             {endereco.complemento && <div className="inteiro"><dt>Complemento</dt><dd>{endereco.complemento}</dd></div>}
@@ -69,36 +82,85 @@ export default function Endereco() {
         <section className="principal">
           <div className="secao-cab" style={{ marginTop: 0 }}>
             <h2>Observações <span className="contador">· {observacoes.length}</span></h2>
-            <button type="button" className="primario" onClick={() => setRegistrando(true)}><IconeMais />Nova observação</button>
+            <button type="button" className="primario" onClick={() => setModal({ tela: 'observacao' })}><IconeMais />Nova observação</button>
           </div>
           {observacoes.length === 0 && <p className="vazio">Nenhuma observação registrada.</p>}
           <ul className="observacoes">
             {observacoes.map((o) => (
               <li key={o.id}>
-                <p>{o.texto}</p>
-                <time dateTime={o.criado_em}>{formatarDataHora(o.criado_em)}</time>
+                <div>
+                  <p>{o.texto}</p>
+                  <time dateTime={o.criado_em}>{formatarDataHora(o.criado_em)}</time>
+                </div>
+                <span className="acoes-icone">
+                  <button type="button" className="icone-botao discreto" aria-label="Editar observação" onClick={() => setModal({ tela: 'observacao', observacao: o })}><IconeEditar /></button>
+                  <button type="button" className="icone-botao discreto perigo" aria-label="Excluir observação" onClick={() => setModal({ tela: 'excluirObservacao', observacao: o })}><IconeLixo /></button>
+                </span>
               </li>
             ))}
           </ul>
         </section>
       </div>
 
-      {registrando && (
+      {modal?.tela === 'observacao' && (
         <FormObservacao
           enderecoId={id}
+          observacao={modal.observacao}
           subtitulo={`${titulo} · ${cliente.nome}`}
-          onFechar={() => setRegistrando(false)}
+          onFechar={fecharModal}
           onSalvo={(obs) => {
-            setObservacoes((lista) => [obs, ...lista]);
-            setRegistrando(false);
+            setObservacoes((lista) => (modal.observacao ? lista.map((x) => (x.id === obs.id ? obs : x)) : [obs, ...lista]));
+            fecharModal();
           }}
         />
+      )}
+      {modal?.tela === 'excluirObservacao' && (
+        <Confirmar
+          titulo="Excluir observação"
+          subtitulo={`${titulo} · ${formatarDataHora(modal.observacao.criado_em)}`}
+          rotulo="Excluir observação"
+          rotuloEnviando="Excluindo…"
+          onFechar={fecharModal}
+          onConfirmar={async () => {
+            await api(`/enderecos/${id}/observacoes/${modal.observacao.id}`, { method: 'DELETE' });
+            setObservacoes((lista) => lista.filter((x) => x.id !== modal.observacao.id));
+            fecharModal();
+          }}
+        >
+          A observação será excluída. Essa ação não pode ser desfeita.
+        </Confirmar>
+      )}
+      {modal?.tela === 'editar' && (
+        <FormEndereco
+          endereco={endereco}
+          clienteNome={cliente.nome}
+          onFechar={fecharModal}
+          onSalvo={(salvo) => { setEndereco(salvo); fecharModal(); }}
+        />
+      )}
+      {/* RF 3.11 / RN 42: a API recusa se houver OS ou orçamento */}
+      {modal?.tela === 'excluir' && (
+        <Confirmar
+          titulo="Excluir endereço"
+          subtitulo={`${titulo} · ${cliente.nome}`}
+          rotulo="Excluir endereço"
+          rotuloEnviando="Excluindo…"
+          onFechar={fecharModal}
+          onConfirmar={async () => {
+            await api(`/enderecos/${id}`, { method: 'DELETE' });
+            navigate(`/clientes/${cliente.id}`);
+          }}
+        >
+          {observacoes.length ? `O endereço e ${observacoes.length === 1 ? 'a observação dele' : `as ${observacoes.length} observações dele`} serão excluídos.` : 'O endereço será excluído.'}
+          {' '}Os orçamentos deste endereço também serão excluídos. Endereços com OS não podem ser excluídos. Essa ação não pode ser desfeita.
+        </Confirmar>
       )}
     </>
   );
 }
 
-function FormObservacao({ enderecoId, subtitulo, onFechar, onSalvo }) {
+// com `observacao`: edita o texto e mantém a data de registro (RF 3.10)
+function FormObservacao({ enderecoId, observacao, subtitulo, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -107,7 +169,10 @@ function FormObservacao({ enderecoId, subtitulo, onFechar, onSalvo }) {
     setErro('');
     setEnviando(true);
     try {
-      onSalvo(await api(`/enderecos/${enderecoId}/observacoes`, { method: 'POST', body: { texto: e.currentTarget.elements.texto.value } }));
+      const body = { texto: e.currentTarget.elements.texto.value };
+      onSalvo(await (observacao
+        ? api(`/enderecos/${enderecoId}/observacoes/${observacao.id}`, { method: 'PUT', body })
+        : api(`/enderecos/${enderecoId}/observacoes`, { method: 'POST', body })));
     } catch (err) {
       setErro(err.message);
       setEnviando(false);
@@ -116,7 +181,7 @@ function FormObservacao({ enderecoId, subtitulo, onFechar, onSalvo }) {
 
   return (
     <Modal
-      titulo="Nova observação"
+      titulo={observacao ? 'Editar observação' : 'Nova observação'}
       subtitulo={subtitulo}
       variante="dialogo"
       onFechar={onFechar}
@@ -128,7 +193,7 @@ function FormObservacao({ enderecoId, subtitulo, onFechar, onSalvo }) {
       )}
     >
       <form id="form-observacao" className="campos" onSubmit={salvar}>
-        <label>Observação<textarea name="texto" rows={5} required autoFocus placeholder="Ex.: Quadro de luz na garagem, acesso pelo portão lateral." /></label>
+        <label>Observação<textarea name="texto" rows={5} defaultValue={observacao?.texto} required autoFocus placeholder="Ex.: Quadro de luz na garagem, acesso pelo portão lateral." /></label>
         <p className="alerta"><IconeInfo tamanho={16} /><span>{AVISO_LGPD}</span></p>
         {erro && <p className="erro" role="alert">{erro}</p>}
       </form>

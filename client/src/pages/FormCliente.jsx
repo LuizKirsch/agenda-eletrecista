@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router';
 import { api } from '../api';
 import Modal from '../agenda/Modal';
 
-export default function ClienteNovo({ onFechar }) {
+// sem `cliente`: cadastra e abre a ficha; com `cliente`: edita e devolve em onSalvo (RF 3.9)
+export default function FormCliente({ cliente, onFechar, onSalvo }) {
   const navigate = useNavigate();
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -13,8 +14,12 @@ export default function ClienteNovo({ onFechar }) {
     setErro('');
     setEnviando(true);
     try {
-      const cliente = await api('/clientes', { method: 'POST', body: Object.fromEntries(new FormData(e.currentTarget)) });
-      navigate(`/clientes/${cliente.id}`);
+      const body = Object.fromEntries(new FormData(e.currentTarget));
+      if (cliente) {
+        onSalvo(await api(`/clientes/${cliente.id}`, { method: 'PUT', body }));
+      } else {
+        navigate(`/clientes/${(await api('/clientes', { method: 'POST', body })).id}`);
+      }
     } catch (err) {
       setErro(err.message);
       setEnviando(false);
@@ -23,7 +28,7 @@ export default function ClienteNovo({ onFechar }) {
 
   return (
     <Modal
-      titulo="Novo cliente"
+      titulo={cliente ? 'Editar cliente' : 'Novo cliente'}
       variante="dialogo"
       onFechar={onFechar}
       rodape={(fechar) => (
@@ -34,8 +39,8 @@ export default function ClienteNovo({ onFechar }) {
       )}
     >
       <form id="form-cliente" className="campos" onSubmit={salvar}>
-        <label className="c4">Nome<input name="nome" maxLength={120} required autoFocus /></label>
-        <label className="c2">Telefone<input name="telefone" type="tel" maxLength={20} required /></label>
+        <label className="c4">Nome<input name="nome" maxLength={120} defaultValue={cliente?.nome} required autoFocus /></label>
+        <label className="c2">Telefone<input name="telefone" type="tel" maxLength={20} defaultValue={cliente?.telefone} required /></label>
         {erro && <p className="erro" role="alert">{erro}</p>}
       </form>
     </Modal>

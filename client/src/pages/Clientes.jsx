@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../api';
 import { IconeBusca, IconeDireita, IconeMais, iniciais } from '../icones';
-import ClienteNovo from './ClienteNovo';
+import FormCliente from './FormCliente';
 
 export default function Clientes() {
   const [busca, setBusca] = useState('');
@@ -68,7 +68,7 @@ export default function Clientes() {
         ))}
       </ul>
 
-      {novo && <ClienteNovo onFechar={() => setNovo(false)} />}
+      {novo && <FormCliente onFechar={() => setNovo(false)} />}
     </>
   );
 }

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
-import Modal from '../agenda/Modal';
-import { IconeCasa, IconeDireita, IconeMais, iniciais } from '../icones';
+import Modal, { Confirmar } from '../agenda/Modal';
+import {
+  IconeCasa, IconeDireita, IconeEditar, IconeLixo, IconeMais, iniciais,
+} from '../icones';
+import FormCliente from './FormCliente';
 
 // Linhas do grid de 6 colunas: Logradouro largo + Número estreito, etc.
 const CAMPOS_ENDERECO = [
@@ -19,9 +22,10 @@ const linhaEndereco = (e) => [[e.logradouro, e.numero].filter(Boolean).join(', '
 
 export default function Cliente() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [cliente, setCliente] = useState(null);
   const [erroCarregar, setErroCarregar] = useState('');
-  const [adicionando, setAdicionando] = useState(false);
+  const [modal, setModal] = useState(null); // 'endereco' | 'editar' | 'excluir'
 
   useEffect(() => {
     api(`/clientes/${id}`).then(setCliente).catch((err) => setErroCarregar(err.message));
@@ -48,11 +52,15 @@ export default function Cliente() {
             <span>{total === 1 ? '1 endereço' : `${total} endereços`}</span>
           </div>
         </div>
+        <span className="acoes-icone" style={{ marginLeft: 'auto', alignSelf: 'flex-start' }}>
+          <button type="button" className="icone-botao discreto" aria-label="Editar cliente" onClick={() => setModal('editar')}><IconeEditar /></button>
+          <button type="button" className="icone-botao discreto perigo" aria-label="Excluir cliente" onClick={() => setModal('excluir')}><IconeLixo /></button>
+        </span>
       </div>
 
       <div className="secao-cab">
         <h2>Endereços</h2>
-        <button type="button" className="primario" onClick={() => setAdicionando(true)}><IconeMais />Adicionar endereço</button>
+        <button type="button" className="primario" onClick={() => setModal('endereco')}><IconeMais />Adicionar endereço</button>
       </div>
 
       {total === 0 && <p className="vazio">Nenhum endereço cadastrado.</p>}
@@ -74,22 +82,50 @@ export default function Cliente() {
         ))}
       </div>
 
-      {adicionando && (
+      {modal === 'endereco' && (
         <FormEndereco
           clienteId={id}
           clienteNome={cliente.nome}
-          onFechar={() => setAdicionando(false)}
+          onFechar={() => setModal(null)}
           onSalvo={(endereco) => {
             setCliente((c) => ({ ...c, enderecos: [...c.enderecos, endereco] }));
-            setAdicionando(false);
+            setModal(null);
           }}
         />
+      )}
+      {modal === 'editar' && (
+        <FormCliente
+          cliente={cliente}
+          onFechar={() => setModal(null)}
+          onSalvo={({ nome, telefone }) => {
+            setCliente((c) => ({ ...c, nome, telefone }));
+            setModal(null);
+          }}
+        />
+      )}
+      {/* RF 3.11 / RN 42: a API recusa se houver OS ou orçamento */}
+      {modal === 'excluir' && (
+        <Confirmar
+          titulo="Excluir cliente"
+          subtitulo={cliente.nome}
+          rotulo="Excluir cliente"
+          rotuloEnviando="Excluindo…"
+          onFechar={() => setModal(null)}
+          onConfirmar={async () => {
+            await api(`/clientes/${id}`, { method: 'DELETE' });
+            navigate('/clientes');
+          }}
+        >
+          {total ? `O cliente, ${total === 1 ? 'o endereço e as observações dele' : `os ${total} endereços e as observações deles`} serão excluídos.` : 'O cliente será excluído.'}
+          {' '}Os orçamentos do cliente também serão excluídos. Clientes com OS não podem ser excluídos. Essa ação não pode ser desfeita.
+        </Confirmar>
       )}
     </>
   );
 }
 
-function FormEndereco({ clienteId, clienteNome, onFechar, onSalvo }) {
+// sem `endereco`: adiciona ao cliente; com `endereco`: edita (RF 3.10)
+export function FormEndereco({ clienteId, clienteNome, endereco, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
@@ -98,7 +134,10 @@ function FormEndereco({ clienteId, clienteNome, onFechar, onSalvo }) {
     setErro('');
     setEnviando(true);
     try {
-      onSalvo(await api(`/clientes/${clienteId}/enderecos`, { method: 'POST', body: Object.fromEntries(new FormData(e.currentTarget)) }));
+      const body = Object.fromEntries(new FormData(e.currentTarget));
+      onSalvo(await (endereco
+        ? api(`/enderecos/${endereco.id}`, { method: 'PUT', body })
+        : api(`/clientes/${clienteId}/enderecos`, { method: 'POST', body })));
     } catch (err) {
       setErro(err.message);
       setEnviando(false);
@@ -107,7 +146,7 @@ function FormEndereco({ clienteId, clienteNome, onFechar, onSalvo }) {
 
   return (
     <Modal
-      titulo="Adicionar endereço"
+      titulo={endereco ? 'Editar endereço' : 'Adicionar endereço'}
       subtitulo={`Cliente: ${clienteNome}`}
       variante="dialogo"
       onFechar={onFechar}
@@ -122,7 +161,7 @@ function FormEndereco({ clienteId, clienteNome, onFechar, onSalvo }) {
         {CAMPOS_ENDERECO.map((c) => (
           <label key={c.nome} className={c.classe || undefined}>
             <span>{c.rotulo}{!c.obrigatorio && <span className="opcional"> (opcional)</span>}</span>
-            <input name={c.nome} maxLength={c.max} required={c.obrigatorio} placeholder={c.placeholder} />
+            <input name={c.nome} maxLength={c.max} required={c.obrigatorio} placeholder={c.placeholder} defaultValue={endereco?.[c.nome] ?? ''} />
           </label>
         ))}
         {erro && <p className="erro" role="alert">{erro}</p>}
