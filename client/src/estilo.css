@@ -105,7 +105,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---------- blocos comuns ---------- */
 .cartao { display: grid; gap: 16px; padding: 20px; border-radius: 14px; background: var(--fundo); box-shadow: var(--relevo); }
-.erro, .aviso, .alerta {
+.erro, .aviso, .alerta, .sucesso {
   margin: 0;
   padding: 10px 14px;
   border-radius: var(--raio);
@@ -114,9 +114,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 .erro { background: var(--perigo-claro); color: #7f1d1d; border: 1px solid var(--perigo-borda); }
 .aviso { background: var(--ambar-claro); color: var(--ambar-texto); }
+.sucesso { background: var(--primaria-clara); color: var(--primaria-texto); }
 .alerta { display: flex; gap: 10px; background: #fffbeb; color: var(--ambar-texto); }
 .alerta svg { flex: none; margin-top: 2px; }
 .carregando { padding: 16px; color: var(--texto-suave); }
+.total-orcamento { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 14px 0 0; padding: 0 4px; color: var(--texto-2); }
+.total-orcamento strong { font-size: 1.25rem; color: var(--texto); }
 .vazio { margin: 0; padding: 28px 12px; border-radius: 14px; box-shadow: var(--afundado); text-align: center; font-size: 13px; color: var(--texto-suave); }
 
 .avatar {
@@ -140,6 +143,9 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .badge.secretaria, .badge.ativo, .pilula.agendada { background: var(--primaria-clara); color: var(--primaria-texto); }
 .badge.inativo, .pilula.concluida { background: var(--neutro); color: #52525b; }
 .pilula.cancelada { background: var(--perigo-claro); color: var(--perigo); }
+.badge.pendente { background: var(--ambar-claro); color: var(--ambar-texto); }
+.badge.aceito { background: var(--primaria-clara); color: var(--primaria-texto); }
+.badge.recusado { background: var(--perigo-claro); color: var(--perigo); }
 .pilula.conflito { background: #fff; color: var(--perigo); border: 1px solid var(--perigo-borda); }
 
 .suave { color: var(--texto-suave); }
@@ -204,7 +210,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
     background: var(--fundo);
     box-shadow: 0 -1px 0 var(--linha);
   }
-  .lateral nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .lateral nav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
   .lateral nav a { flex-direction: column; justify-content: center; gap: 3px; height: 54px; font-size: 11px; }
   .topo-celular { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 0; }
   .topo-celular .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; }
@@ -245,7 +251,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .migalhas a:hover { color: var(--primaria); }
 .migalhas [aria-current] { color: var(--texto); font-weight: 500; }
 
-.perfil-cab { display: flex; align-items: center; gap: 16px; }
+.perfil-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .perfil-cab > div { display: grid; gap: 4px; }
 .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; color: var(--texto-suave); }
 
@@ -291,9 +297,13 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .dados dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 
 .observacoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.observacoes li { display: grid; gap: 6px; padding: 16px 20px; border-radius: 14px; background: var(--fundo); box-shadow: var(--relevo); }
+.observacoes li { display: flex; align-items: flex-start; gap: 12px; padding: 14px 12px 14px 20px; border-radius: 14px; background: var(--fundo); box-shadow: var(--relevo); }
+.observacoes li > div { flex: 1; min-width: 0; display: grid; gap: 6px; padding-top: 2px; }
 .observacoes p { white-space: pre-wrap; line-height: 1.55; }
 .observacoes time { font-size: 12px; color: var(--texto-suave); }
+.acoes-icone { flex: none; display: flex; gap: 2px; margin: -4px 0; }
+.cartao-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -6px -8px -4px 0; }
+.cartao-cab h2 { font-size: 15px; }
 
 /* ---------- tabelas (viram cartões no celular) ---------- */
 .tabela { border-radius: 14px; background: var(--fundo); box-shadow: var(--relevo); overflow-x: auto; }
@@ -340,8 +350,10 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   background: var(--fundo);
   color: var(--texto);
   box-shadow: -8px 0 24px rgba(110, 122, 140, .22);
+  /* fora do [open]: na animação de saída o display flex ainda vale e o layout não pode virar linha */
+  flex-direction: column;
 }
-.modal[open] { display: flex; flex-direction: column; }
+.modal[open] { display: flex; }
 .modal.largo { width: min(600px, 100%); }
 .modal.dialogo { width: min(520px, calc(100% - 32px)); height: fit-content; max-height: calc(100dvh - 48px); margin: auto; border-radius: 16px; box-shadow: var(--sombra-flutuante); }
 .modal::backdrop { background: rgba(196, 204, 215, .6); }
@@ -577,6 +589,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .obs-endereco time { font-size: 12px; opacity: .8; }
 .card-atividade { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px; border-radius: 12px; box-shadow: var(--relevo-p); }
 .card-atividade .tipo { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+.card-atividade .avulsa { flex: 1; font-weight: 500; }
+.card-atividade .inteira { grid-column: 1 / -1; }
 .card-atividade .numero { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--neutro); font-size: 12px; font-weight: 600; }
 .card-atividade label { font-size: 12px; font-weight: 400; color: var(--texto-suave); }
 @media (max-width: 639px) {
