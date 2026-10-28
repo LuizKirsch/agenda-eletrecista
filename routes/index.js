@@ -13,6 +13,7 @@ router.use('/tipos-atividade', require('./tipoAtividade.routes'));
 router.use('/agenda', require('./agenda.routes'));
 router.use('/os', require('./os.routes'));
 router.use('/atividades-os', require('./atividadeOs.routes'));
+router.use('/orcamentos', require('./orcamento.routes'));
 
 router.use(() => { throw httpErro(404, 'Recurso não encontrado.'); });
 

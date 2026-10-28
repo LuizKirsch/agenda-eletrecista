@@ -40,7 +40,8 @@ async function avisoConflito(ids, transaction) {
   return gravadas.some((a) => conflitos.has(a.id));
 }
 
-const tipoResumo = (tipo) => ({ id: tipo.id, nome: tipo.nome, ativo: tipo.ativo });
+// Atividade avulsa (vinda de item avulso do orçamento) não tem tipo: a descrição faz o papel do nome (RF 6.3)
+const tipoResumo = ({ tipo, descricao }) => (tipo ? { id: tipo.id, nome: tipo.nome, ativo: tipo.ativo } : { id: null, nome: descricao, ativo: null });
 
 async function listar(inicio, fim) {
   const atividades = await AtividadeOs.findAll({
@@ -70,7 +71,7 @@ async function listar(inicio, fim) {
     os_id: a.ordem_servico_id,
     sequencia: a.sequencia,
     total: totalPorOs.get(a.ordem_servico_id),
-    tipo: tipoResumo(a.tipo),
+    tipo: tipoResumo(a),
     data: a.data,
     hora_inicio: hhmm(a.hora_inicio),
     hora_fim: hhmm(a.hora_fim),

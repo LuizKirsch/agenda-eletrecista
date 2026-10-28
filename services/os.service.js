@@ -1,5 +1,5 @@
 const {
-  sequelize, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade,
+  sequelize, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade, Orcamento,
 } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 const { paraMin, paraHora } = require('./horario');
@@ -34,13 +34,21 @@ async function validarClienteEndereco({ cliente_id: clienteId, endereco_id: ende
 }
 
 // Linhas novas só aceitam tipo ativo; linha existente pode manter o tipo inativo que já tinha (RN 20).
+// Linha sem tipo só vale para uma atividade avulsa que já existe (RF 6.3).
 async function validarTipos(linhas, existentes, transaction) {
-  const tipos = await TipoAtividade.findAll({ where: { id: [...new Set(linhas.map((l) => l.tipo_atividade_id))] }, transaction });
+  const ids = [...new Set(linhas.map((l) => l.tipo_atividade_id).filter(Boolean))];
+  const tipos = await TipoAtividade.findAll({ where: { id: ids }, transaction });
   const porId = new Map(tipos.map((t) => [String(t.id), t]));
   linhas.forEach((linha, i) => {
+    const existente = linha.id && existentes.get(String(linha.id));
+    if (existente && existente.status !== 'agendada') return;
+    if (!linha.tipo_atividade_id) {
+      if (existente && existente.tipo_atividade_id === null) return;
+      throw httpErro(400, `Selecione o tipo de atividade (${i + 1}ª atividade).`);
+    }
     const tipo = porId.get(String(linha.tipo_atividade_id));
     if (!tipo) throw httpErro(400, `Selecione o tipo de atividade (${i + 1}ª atividade).`);
-    const mantemOMesmo = linha.id && String(existentes.get(String(linha.id))?.tipo_atividade_id) === String(tipo.id);
+    const mantemOMesmo = existente && String(existente.tipo_atividade_id) === String(tipo.id);
     if (!tipo.ativo && !mantemOMesmo) {
       throw httpErro(400, `O tipo "${tipo.nome}" está inativo. Escolha um tipo ativo (${i + 1}ª atividade).`);
     }
@@ -66,15 +74,17 @@ async function detalhar(id) {
   });
   if (!os) throw httpErro(404, 'Ordem de serviço não encontrada.');
   const conflitos = await conflitosNasDatas(os.atividades.map((a) => a.data));
+  const orcamento = await Orcamento.findOne({ where: { ordem_servico_id: os.id } });
   return {
     id: os.id,
+    orcamento_id: orcamento?.id ?? null,
     observacao: os.observacao,
     cliente: { id: os.cliente.id, nome: os.cliente.nome, telefone: os.cliente.telefone },
     endereco: os.endereco,
     atividades: os.atividades.map((a) => ({
       id: a.id,
       sequencia: a.sequencia,
-      tipo: { ...tipoResumo(a.tipo), duracao_padrao_min: a.tipo.duracao_padrao_min },
+      tipo: { ...tipoResumo(a), duracao_padrao_min: a.tipo?.duracao_padrao_min ?? null },
       data: a.data,
       hora_inicio: hhmm(a.hora_inicio),
       hora_fim: hhmm(a.hora_fim),
@@ -104,9 +114,19 @@ function atualizar(id, dados) {
   return sequelize.transaction(async (transaction) => {
     const os = await buscarOs(id, transaction);
     const existentes = new Map(os.atividades.map((a) => [String(a.id), a]));
-    const idsMantidos = new Set(dados.atividades.filter((l) => l.id).map((l) => String(l.id)));
-    if ([...idsMantidos].some((idLinha) => !existentes.has(idLinha))) throw httpErro(404, 'Atividade não encontrada.');
+    const comId = dados.atividades.filter((l) => l.id).map((l) => String(l.id));
+    const idsMantidos = new Set(comId);
+    if (idsMantidos.size !== comId.length) throw httpErro(400, 'A mesma atividade foi enviada mais de uma vez.');
+    if (comId.some((idLinha) => !existentes.has(idLinha))) throw httpErro(404, 'Atividade não encontrada.');
+    // RN 9: concluídas e canceladas são só leitura na edição; a exclusão é pelo detalhe da OS (RN 14)
+    if (os.atividades.some((a) => a.status !== 'agendada' && !idsMantidos.has(String(a.id)))) {
+      throw httpErro(409, 'Atividades concluídas ou canceladas não podem ser removidas na edição da OS. Exclua pelo detalhe da OS.');
+    }
 
+    // RN 57: a OS gerada por orçamento mantém o cliente do orçamento
+    if (String(dados.cliente_id) !== String(os.cliente_id) && await Orcamento.count({ where: { ordem_servico_id: os.id }, transaction })) {
+      throw httpErro(409, 'Esta OS foi gerada por um orçamento e não pode trocar de cliente.');
+    }
     await validarClienteEndereco(dados, transaction);
     await validarTipos(dados.atividades, existentes, transaction);
     await os.update({ cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, observacao: dados.observacao }, { transaction });
@@ -116,9 +136,11 @@ function atualizar(id, dados) {
 
     const ids = [];
     for (const [i, linha] of dados.atividades.entries()) {
-      if (linha.id) {
-        await existentes.get(String(linha.id)).update(camposAtividade(linha, i), { transaction });
-        ids.push(linha.id);
+      const existente = linha.id && existentes.get(String(linha.id));
+      if (existente) {
+        // concluída/cancelada só acompanha a renumeração da sequência (RN 35)
+        await existente.update(existente.status === 'agendada' ? camposAtividade(linha, i) : { sequencia: i + 1 }, { transaction });
+        ids.push(existente.id);
       } else {
         const nova = await AtividadeOs.create(
           { ...camposAtividade(linha, i), ordem_servico_id: os.id, status: 'agendada' },
@@ -215,5 +237,5 @@ function excluirAtividade(id) {
 }
 
 module.exports = {
-  detalhar, criar, atualizar, excluir, deslocar, concluir, remarcarAtividade, alterarStatus, excluirAtividade,
+  validarClienteEndereco, detalhar, criar, atualizar, excluir, deslocar, concluir, remarcarAtividade, alterarStatus, excluirAtividade,
 };

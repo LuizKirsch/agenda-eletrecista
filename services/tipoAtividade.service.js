@@ -1,15 +1,18 @@
 const { Op } = require('sequelize');
-const { TipoAtividade, AtividadeOs } = require('../models');
+const { TipoAtividade, AtividadeOs, OrcamentoItem } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 
-// Única fonte da contagem de uso (RF 5.6, RF 5.7, RN 19).
-function contarUso(tipoId) {
-  return AtividadeOs.count({ where: { tipo_atividade_id: tipoId } });
+// Única fonte da contagem de uso: atividades de OS e itens de orçamento (RF 5.6, RF 5.7, RN 19).
+async function contarUso(tipoId) {
+  const where = { tipo_atividade_id: tipoId };
+  return await AtividadeOs.count({ where }) + await OrcamentoItem.count({ where });
 }
+
+const reais = (v) => (v === null || v === undefined ? null : Number(v));
 
 async function comUso(tipo) {
   const { id, nome, duracao_padrao_min: duracao, ativo } = tipo;
-  return { id, nome, duracao_padrao_min: duracao, ativo, uso: await contarUso(id) };
+  return { id, nome, duracao_padrao_min: duracao, valor_padrao: reais(tipo.valor_padrao), ativo, uso: await contarUso(id) };
 }
 
 async function buscar(id) {
@@ -44,15 +47,15 @@ async function listar({ somenteAtivos }) {
   return Promise.all(tipos.map(comUso));
 }
 
-async function criar({ nome, duracao_padrao_min }) {
-  await garantirNomeLivre(nome);
-  return comUso(await salvando(() => TipoAtividade.create({ nome, duracao_padrao_min, ativo: true })));
+async function criar(dados) {
+  await garantirNomeLivre(dados.nome);
+  return comUso(await salvando(() => TipoAtividade.create({ ...dados, ativo: true })));
 }
 
-async function atualizar(id, { nome, duracao_padrao_min }) {
+async function atualizar(id, dados) {
   const tipo = await buscar(id);
-  await garantirNomeLivre(nome, tipo.id);
-  await salvando(() => tipo.update({ nome, duracao_padrao_min }));
+  await garantirNomeLivre(dados.nome, tipo.id);
+  await salvando(() => tipo.update(dados));
   return comUso(tipo);
 }
 
@@ -70,4 +73,4 @@ async function excluir(id) {
   await tipo.destroy();
 }
 
-module.exports = { contarUso, listar, criar, atualizar, alterarSituacao, excluir };
+module.exports = { reais, contarUso, listar, criar, atualizar, alterarSituacao, excluir };

@@ -26,9 +26,11 @@ function lerOs(body) {
 
   const atividades = body.atividades.map((linha, i) => {
     const sufixo = ` (${i + 1}ª atividade)`;
+    const id = lerId(linha?.id);
     const tipoId = lerId(linha?.tipo_atividade_id);
-    if (!tipoId) throw httpErro(400, `Selecione o tipo de atividade${sufixo}.`);
-    return { id: lerId(linha.id), tipo_atividade_id: tipoId, ...lerHorario(linha, sufixo) };
+    // sem tipo só a atividade avulsa já existente; o service confere
+    if (!tipoId && !id) throw httpErro(400, `Selecione o tipo de atividade${sufixo}.`);
+    return { id, tipo_atividade_id: tipoId, ...lerHorario(linha, sufixo) };
   });
   return { cliente_id: clienteId, endereco_id: enderecoId, observacao, atividades };
 }
@@ -63,4 +65,4 @@ async function concluir(req, res) {
   res.json(await osService.concluir(req.params.id));
 }
 
-module.exports = { lerHorario, detalhar, criar, atualizar, excluir, deslocar, concluir };
+module.exports = { lerId, lerHorario, detalhar, criar, atualizar, excluir, deslocar, concluir };
