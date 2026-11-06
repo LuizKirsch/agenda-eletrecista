@@ -42,9 +42,4 @@ async function alterarSituacao(req, res) {
   res.json(await tipoService.alterarSituacao(req.params.id, req.body.ativo));
 }
 
-async function excluir(req, res) {
-  await tipoService.excluir(req.params.id);
-  res.status(204).end();
-}
-
-module.exports = { vazio, lerValor, listar, criar, atualizar, alterarSituacao, excluir };
+module.exports = { vazio, lerValor, listar, criar, atualizar, alterarSituacao };

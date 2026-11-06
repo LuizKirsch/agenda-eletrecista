@@ -66,11 +66,4 @@ async function alterarSituacao(id, ativo) {
   return comUso(tipo);
 }
 
-async function excluir(id) {
-  const tipo = await buscar(id);
-  if (await contarUso(tipo.id) > 0) throw httpErro(409, 'Este tipo de atividade está em uso e não pode ser excluído. Desative-o.');
-  await garantirOutroAtivo(tipo);
-  await tipo.destroy();
-}
-
-module.exports = { reais, contarUso, listar, criar, atualizar, alterarSituacao, excluir };
+module.exports = { reais, contarUso, listar, criar, atualizar, alterarSituacao };

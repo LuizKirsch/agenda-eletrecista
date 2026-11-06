@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router';
 import { api } from '../api';
-import Modal, { Confirmar } from '../agenda/Modal';
+import Modal from '../agenda/Modal';
 import { formatarDuracao, formatarReais } from '../formato';
-import { IconeEditar, IconeLixo, IconeMais } from '../icones';
+import { IconeEditar, IconeMais } from '../icones';
 
 const uso = (n) => (n === 0 ? 'nenhum' : n === 1 ? '1 uso' : `${n} usos`);
 
@@ -13,7 +13,6 @@ export default function TiposAtividade() {
   const { state } = useLocation();
   const [tipos, setTipos] = useState(null);
   const [form, setForm] = useState(null); // null | { tipo?: {...} }
-  const [excluindo, setExcluindo] = useState(null);
   const [erro, setErro] = useState(state?.mensagem ?? '');
   const [ocupado, setOcupado] = useState(false);
 
@@ -77,32 +76,12 @@ export default function TiposAtividade() {
                   <td className="acoes">
                     <button type="button" className="icone-botao discreto" aria-label={`Editar ${t.nome}`} disabled={ocupado} onClick={() => { setErro(''); setForm({ tipo: t }); }}><IconeEditar /></button>
                     <button type="button" className="discreto" disabled={ocupado} onClick={() => alternarSituacao(t)}>{t.ativo ? 'Desativar' : 'Reativar'}</button>
-                    {t.uso === 0 && (
-                      <button type="button" className="icone-botao discreto perigo" aria-label={`Excluir ${t.nome}`} disabled={ocupado} onClick={() => { setErro(''); setExcluindo(t); }}><IconeLixo /></button>
-                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-
-      {excluindo && (
-        <Confirmar
-          titulo="Excluir tipo de atividade"
-          subtitulo={excluindo.nome}
-          rotulo="Excluir tipo"
-          rotuloEnviando="Excluindo…"
-          onFechar={() => setExcluindo(null)}
-          onConfirmar={async () => {
-            await api(`/tipos-atividade/${excluindo.id}`, { method: 'DELETE' });
-            setTipos((lista) => lista.filter((x) => x.id !== excluindo.id));
-            setExcluindo(null);
-          }}
-        >
-          O tipo será excluído do catálogo. Essa ação não pode ser desfeita.
-        </Confirmar>
       )}
 
       {form && (
