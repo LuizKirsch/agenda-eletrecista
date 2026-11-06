@@ -5,6 +5,7 @@ import { carregarEletricistas, oferecer } from '../eletricistas';
 import { formatarDataHora } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
 import Modal from './Modal';
+import SelectBusca from '../SelectBusca';
 import SeletorClienteEndereco from './SeletorClienteEndereco';
 
 // Fim = início + duração padrão do tipo (RF 1.8, RN 2)
@@ -142,10 +143,8 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
 
           <label>
             Eletricista responsável
-            <select value={eletricistaId} onChange={(e) => trocarResponsavel(e.target.value)} required>
-              <option value="" disabled>Selecione</option>
-              {oferecer(eletricistas, eletricistaId).map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
-            </select>
+            <SelectBusca value={eletricistaId} onChange={trocarResponsavel} required
+              opcoes={oferecer(eletricistas, eletricistaId).map((u) => ({ valor: u.id, rotulo: `${u.nome}${u.ativo ? '' : ' (inativo)'}`, desabilitada: !u.ativo }))} />
           </label>
 
           {observacoesEndereco.length > 0 && (
@@ -168,17 +167,14 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
                   {l.encerrada ? (
                     <strong className="avulsa">{l.nome} <span className={`pilula ${l.encerrada}`}>{l.encerrada === 'concluida' ? 'Concluída' : 'Cancelada'}</span></strong>
                   ) : l.avulsa ? <strong className="avulsa">{l.avulsa} <span className="badge inativo">avulsa</span></strong> : (
-                    <select
-                      aria-label={`Tipo (${i + 1}ª atividade)`}
+                    <SelectBusca
+                      ariaLabel={`Tipo (${i + 1}ª atividade)`}
                       value={l.tipo_atividade_id}
-                      onChange={(e) => alterarLinha(l.chave, { tipo_atividade_id: e.target.value })}
+                      onChange={(v) => alterarLinha(l.chave, { tipo_atividade_id: v })}
                       required
-                    >
-                      <option value="" disabled>Selecione a atividade</option>
-                      {tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => (
-                        <option key={t.id} value={t.id}>{t.nome} · {t.duracao_padrao_min} min{t.ativo ? '' : ' (inativo)'}</option>
-                      ))}
-                    </select>
+                      placeholder="Selecione a atividade"
+                      opcoes={tipos.filter((t) => t.ativo || String(t.id) === String(l.tipoOriginal)).map((t) => ({ valor: t.id, rotulo: `${t.nome} · ${t.duracao_padrao_min} min${t.ativo ? '' : ' (inativo)'}`, desabilitada: !t.ativo }))}
+                    />
                   )}
                   {linhas.length > 1 && !l.encerrada && (
                     <button type="button" className="icone-botao discreto perigo" aria-label={`Remover ${i + 1}ª atividade`} onClick={() => { setLinhas(linhas.filter((x) => x.chave !== l.chave)); setAlterado(true); }}>
@@ -188,10 +184,8 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
                 </div>
                 <label className="inteira">
                   Eletricista
-                  <select value={l.eletricista_id} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { eletricista_id: e.target.value })} required>
-                    <option value="" disabled>Selecione</option>
-                    {oferecer(eletricistas, l.eletricista_id).map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
-                  </select>
+                  <SelectBusca value={l.eletricista_id} disabled={!!l.encerrada} onChange={(v) => alterarLinha(l.chave, { eletricista_id: v })} required
+                    opcoes={oferecer(eletricistas, l.eletricista_id).map((u) => ({ valor: u.id, rotulo: `${u.nome}${u.ativo ? '' : ' (inativo)'}`, desabilitada: !u.ativo }))} />
                 </label>
                 <label className="data">Data<input type="date" value={l.data} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required /></label>
                 <label>Início<input type="time" value={l.hora_inicio} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required /></label>

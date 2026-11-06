@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SelectBusca from '../SelectBusca';
 import { api } from '../api';
 import { useAuth } from '../auth';
 import Modal, { Confirmar } from '../agenda/Modal';
@@ -97,6 +98,7 @@ export default function Usuarios() {
 function FormUsuario({ editando, proprio, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [perfil, setPerfil] = useState(editando?.perfil ?? '');
 
   async function salvar(e) {
     e.preventDefault();
@@ -131,11 +133,8 @@ function FormUsuario({ editando, proprio, onFechar, onSalvo }) {
         <label className="c3">Login<input name="login" maxLength={60} defaultValue={editando?.login} autoComplete="off" autoCapitalize="none" required /></label>
         <label className="c3">
           Perfil
-          <select name="perfil" required defaultValue={editando?.perfil ?? ''} disabled={proprio}>
-            <option value="" disabled>Selecione</option>
-            <option value="eletricista">Eletricista</option>
-            <option value="secretaria">Secretária</option>
-          </select>
+          <SelectBusca name="perfil" required value={perfil} onChange={setPerfil} disabled={proprio}
+            opcoes={[{ valor: 'eletricista', rotulo: 'Eletricista' }, { valor: 'secretaria', rotulo: 'Secretária' }]} />
         </label>
         <label>
           Senha
