@@ -88,6 +88,16 @@ const OrcamentoItem = sequelize.define('OrcamentoItem', {
   sequencia: { type: DataTypes.INTEGER, allowNull: false },
 }, { tableName: 'orcamento_item', timestamps: false, underscored: true });
 
+// snapshot: JSON (texto) do orçamento e dos itens antes da edição (RF 4.20)
+const OrcamentoVersao = sequelize.define('OrcamentoVersao', {
+  id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
+  orcamento_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
+  numero: { type: DataTypes.INTEGER, allowNull: false },
+  usuario_id: { type: DataTypes.BIGINT.UNSIGNED },
+  snapshot: { type: DataTypes.TEXT, allowNull: false },
+  criado_em: { type: DataTypes.DATE },
+}, { tableName: 'orcamento_versao', timestamps: false, underscored: true });
+
 Cliente.hasMany(Endereco, { foreignKey: 'cliente_id', as: 'enderecos' });
 Endereco.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 Endereco.hasMany(EnderecoObservacao, { foreignKey: 'endereco_id', as: 'observacoes' });
@@ -103,7 +113,8 @@ Orcamento.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 Orcamento.belongsTo(Endereco, { foreignKey: 'endereco_id', as: 'endereco' });
 Orcamento.hasMany(OrcamentoItem, { foreignKey: 'orcamento_id', as: 'itens' });
 OrcamentoItem.belongsTo(TipoAtividade, { foreignKey: 'tipo_atividade_id', as: 'tipo' });
+OrcamentoVersao.belongsTo(Usuario, { foreignKey: 'usuario_id', as: 'usuario' });
 
 module.exports = {
-  sequelize, Usuario, Cliente, Endereco, EnderecoObservacao, TipoAtividade, OrdemServico, AtividadeOs, Orcamento, OrcamentoItem,
+  sequelize, Usuario, Cliente, Endereco, EnderecoObservacao, TipoAtividade, OrdemServico, AtividadeOs, Orcamento, OrcamentoItem, OrcamentoVersao,
 };

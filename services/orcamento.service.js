@@ -1,5 +1,5 @@
 const {
-  sequelize, Orcamento, OrcamentoItem, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade,
+  sequelize, Orcamento, OrcamentoItem, OrcamentoVersao, Usuario, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade,
 } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 const { paraMin, paraHora } = require('./horario');
@@ -60,7 +60,7 @@ async function listar() {
   }));
 }
 
-async function detalhar(id) {
+async function detalhar(id, transaction) {
   const o = await Orcamento.findByPk(id, {
     include: [
       { model: Cliente, as: 'cliente' },
@@ -68,6 +68,7 @@ async function detalhar(id) {
       { model: OrcamentoItem, as: 'itens', include: { model: TipoAtividade, as: 'tipo' } },
     ],
     order: ordemItens,
+    transaction,
   });
   if (!o) throw httpErro(404, 'Orçamento não encontrado.');
   return {
@@ -104,17 +105,39 @@ async function criar(dados) {
 }
 
 // Os itens são substituídos por inteiro: não há nada fora do orçamento que aponte para eles
-async function atualizar(id, dados) {
+async function atualizar(id, dados, usuarioId) {
   await sequelize.transaction(async (transaction) => {
     const orcamento = await buscar(id, transaction);
     garantirPendente(orcamento, 'editar');
     await validarClienteEndereco(dados, transaction);
     await validarTipos(dados.itens, new Set(orcamento.itens.map((i) => String(i.tipo_atividade_id))), transaction);
+    // RF 4.20: o estado anterior vira a próxima versão numerada, na mesma transação da edição
+    const numero = ((await OrcamentoVersao.max('numero', { where: { orcamento_id: orcamento.id }, transaction })) || 0) + 1;
+    await OrcamentoVersao.create({
+      orcamento_id: orcamento.id, numero, usuario_id: usuarioId, snapshot: JSON.stringify(await detalhar(id, transaction)),
+    }, { transaction });
     await orcamento.update({ cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, observacao: dados.observacao }, { transaction });
     await OrcamentoItem.destroy({ where: { orcamento_id: orcamento.id }, transaction });
     await gravarItens(orcamento.id, dados.itens, transaction);
   });
   return detalhar(id);
+}
+
+const versaoDe = (v) => ({ numero: v.numero, criado_em: v.criado_em, autor: v.usuario?.nome ?? null });
+
+// Versões anteriores (somente leitura); a versão atual é a última + 1
+async function listarVersoes(id) {
+  await buscar(id);
+  const versoes = await OrcamentoVersao.findAll({
+    where: { orcamento_id: id }, include: { model: Usuario, as: 'usuario' }, order: [['numero', 'DESC']],
+  });
+  return versoes.map(versaoDe);
+}
+
+async function detalharVersao(id, numero) {
+  const v = await OrcamentoVersao.findOne({ where: { orcamento_id: id, numero }, include: { model: Usuario, as: 'usuario' } });
+  if (!v) throw httpErro(404, 'Versão não encontrada.');
+  return { ...versaoDe(v), orcamento: JSON.parse(v.snapshot) };
 }
 
 function excluir(id) {
@@ -168,5 +191,5 @@ function aceitar(id, horarios) {
 }
 
 module.exports = {
-  listar, detalhar, criar, atualizar, excluir, recusar, aceitar,
+  listar, detalhar, criar, atualizar, excluir, recusar, aceitar, listarVersoes, detalharVersao,
 };

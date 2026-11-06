@@ -51,7 +51,7 @@ async function criar(req, res) {
 }
 
 async function atualizar(req, res) {
-  res.json(await orcamentoService.atualizar(req.params.id, lerOrcamento(req.body)));
+  res.json(await orcamentoService.atualizar(req.params.id, lerOrcamento(req.body), req.usuario.id));
 }
 
 async function excluir(req, res) {
@@ -75,6 +75,14 @@ async function aceitar(req, res) {
   res.json(await orcamentoService.aceitar(req.params.id, horarios));
 }
 
+async function listarVersoes(req, res) {
+  res.json(await orcamentoService.listarVersoes(req.params.id));
+}
+
+async function detalharVersao(req, res) {
+  res.json(await orcamentoService.detalharVersao(req.params.id, req.params.numero));
+}
+
 module.exports = {
-  listar, detalhar, criar, atualizar, excluir, recusar, aceitar,
+  listar, detalhar, criar, atualizar, excluir, recusar, aceitar, listarVersoes, detalharVersao,
 };

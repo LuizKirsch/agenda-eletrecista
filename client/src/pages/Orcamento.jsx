@@ -9,7 +9,7 @@ import {
   formatarDataHora, formatarDuracao, formatarEndereco, formatarReais, formatarTelefone,
 } from '../formato';
 import {
-  IconeCheck, IconeDireita, IconeEditar, IconeLixo,
+  IconeCheck, IconeDireita, IconeEditar, IconeImprimir, IconeLixo,
 } from '../icones';
 import OrcamentoForm from './OrcamentoForm';
 import { STATUS_ORCAMENTO } from './Orcamentos';
@@ -34,7 +34,7 @@ export default function Orcamento() {
 
   return (
     <>
-      <nav className="migalhas" aria-label="Caminho">
+      <nav className="migalhas nao-imprime" aria-label="Caminho">
         <Link to="/orcamentos">Orçamentos</Link><IconeDireita tamanho={14} /><span aria-current="page">Nº {o.id}</span>
       </nav>
 
@@ -43,25 +43,27 @@ export default function Orcamento() {
           <h1>Orçamento nº {o.id} <span className={`badge ${o.status}`}>{STATUS_ORCAMENTO[o.status]}</span></h1>
           <p className="suave">Criado em {formatarDataHora(o.criado_em)}</p>
         </div>
-        {/* RF 4.15: aceito ou recusado fica só para leitura */}
-        {pendente && (
-          <div className="acoes-cab">
+        <div className="acoes-cab nao-imprime">
+          {/* RF 4.18: imprimir permite salvar como PDF, em qualquer status */}
+          <button type="button" onClick={() => window.print()}><IconeImprimir />Exportar PDF</button>
+          {/* RF 4.15: aceito ou recusado fica só para leitura */}
+          {pendente && (<>
             <button type="button" className="discreto perigo" onClick={() => setModal('excluir')}><IconeLixo />Excluir</button>
             <button type="button" onClick={() => setModal('recusar')}>Recusar</button>
             <button type="button" onClick={() => setModal('editar')}><IconeEditar />Editar</button>
             <button type="button" className="primario" onClick={() => setModal('aceitar')}><IconeCheck />Aceitar</button>
-          </div>
-        )}
+          </>)}
+        </div>
       </div>
 
       {gerada && (
-        <p className={gerada.aviso_conflito ? 'aviso' : 'sucesso'} role="status" style={{ marginBottom: 16 }}>
+        <p className={`nao-imprime ${gerada.aviso_conflito ? 'aviso' : 'sucesso'}`} role="status" style={{ marginBottom: 16 }}>
           OS nº {gerada.os_id} criada. <Link to="/agenda" state={{ data: gerada.data }}>Ver na agenda</Link>
           {gerada.aviso_conflito && <><br />Atenção: há conflito de horário com outra atividade. Ajuste na agenda se preferir.</>}
         </p>
       )}
       {!gerada && o.status === 'aceito' && (
-        <p className="suave" style={{ marginBottom: 16 }}>
+        <p className="suave nao-imprime" style={{ marginBottom: 16 }}>
           {o.ordem_servico_id ? `Este orçamento gerou a OS nº ${o.ordem_servico_id}.` : 'A OS gerada por este orçamento foi excluída.'}
         </p>
       )}
@@ -74,37 +76,9 @@ export default function Orcamento() {
         </dl>
       </div>
 
-      <div className="tabela">
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Qtd.</th>
-              <th>Valor unit.</th>
-              <th>Tempo</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {o.itens.map((i) => (
-              <tr key={i.id}>
-                <td>
-                  <span className="nome">
-                    {i.descricao}
-                    {!i.tipo && <span className="badge inativo">avulso</span>}
-                    {i.tipo && !i.tipo.ativo && <span className="badge inativo">tipo inativo</span>}
-                  </span>
-                </td>
-                <td data-rotulo="Qtd.">{i.quantidade}</td>
-                <td data-rotulo="Valor unit.">{formatarReais(i.valor_unitario)}</td>
-                <td data-rotulo="Tempo">{formatarDuracao(i.duracao_min)}</td>
-                <td data-rotulo="Subtotal">{formatarReais(i.quantidade * i.valor_unitario)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="total-orcamento">Total<strong>{formatarReais(o.total)}</strong></p>
+      <ItensOrcamento itens={o.itens} total={o.total} />
+
+      <Versoes orcamentoId={o.id} atual={o} />
 
       {modal === 'editar' && (
         <OrcamentoForm
