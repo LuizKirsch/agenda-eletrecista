@@ -135,6 +135,111 @@ export default function Orcamento() {
   );
 }
 
+// RN 66: o tempo dos itens não sai no PDF
+function ItensOrcamento({ itens, total }) {
+  return (
+    <>
+      <div className="tabela">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qtd.</th>
+              <th>Valor unit.</th>
+              <th className="nao-imprime">Tempo</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itens.map((i) => (
+              <tr key={i.id}>
+                <td>
+                  <span className="nome">
+                    {i.descricao}
+                    {!i.tipo && <span className="badge inativo">avulso</span>}
+                    {i.tipo && !i.tipo.ativo && <span className="badge inativo nao-imprime">tipo inativo</span>}
+                  </span>
+                </td>
+                <td data-rotulo="Qtd.">{i.quantidade}</td>
+                <td data-rotulo="Valor unit.">{formatarReais(i.valor_unitario)}</td>
+                <td data-rotulo="Tempo" className="nao-imprime">{formatarDuracao(i.duracao_min)}</td>
+                <td data-rotulo="Subtotal">{formatarReais(i.quantidade * i.valor_unitario)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="total-orcamento">Total<strong>{formatarReais(total)}</strong></p>
+    </>
+  );
+}
+
+// RF 4.20: versões anteriores, só leitura; recarrega quando o orçamento atual muda (após editar)
+function Versoes({ orcamentoId, atual }) {
+  const [versoes, setVersoes] = useState([]);
+  const [aberta, setAberta] = useState(null);
+  const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    api(`/orcamentos/${orcamentoId}/versoes`).then(setVersoes).catch((err) => setErro(err.message));
+  }, [orcamentoId, atual]);
+
+  async function abrir(numero) {
+    setErro('');
+    try {
+      setAberta(await api(`/orcamentos/${orcamentoId}/versoes/${numero}`));
+    } catch (err) {
+      setErro(err.message);
+    }
+  }
+
+  if (!versoes.length && !erro) return null;
+  return (
+    <section className="nao-imprime" style={{ marginTop: 24 }}>
+      <h2>Histórico de versões</h2>
+      {erro && <p className="erro" role="alert">{erro}</p>}
+      <div className="tabela">
+        <table>
+          <thead><tr><th>Versão</th><th>Data</th><th>Autor</th><th aria-label="Ações" /></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>{versoes.length + 1} (atual)</strong></td>
+              <td data-rotulo="Data">—</td>
+              <td data-rotulo="Autor">—</td>
+              <td />
+            </tr>
+            {versoes.map((v) => (
+              <tr key={v.numero}>
+                <td>{v.numero}</td>
+                <td data-rotulo="Data">{formatarDataHora(v.criado_em)}</td>
+                <td data-rotulo="Autor">{v.autor ?? '—'}</td>
+                <td><button type="button" className="discreto" onClick={() => abrir(v.numero)}>Ver</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {aberta && (
+        <Modal
+          titulo={`Versão ${aberta.numero}`}
+          subtitulo={`${formatarDataHora(aberta.criado_em)}${aberta.autor ? ` · ${aberta.autor}` : ''} · só leitura`}
+          variante="dialogo"
+          largo
+          onFechar={() => setAberta(null)}
+          rodape={(fechar) => <button type="button" onClick={fechar}>Fechar</button>}
+        >
+          <dl className="dados" style={{ marginBottom: 16 }}>
+            <div><dt>Cliente</dt><dd>{aberta.orcamento.cliente.nome} · {formatarTelefone(aberta.orcamento.cliente.telefone)}</dd></div>
+            <div><dt>Endereço</dt><dd>{formatarEndereco(aberta.orcamento.endereco)}</dd></div>
+            {aberta.orcamento.observacao && <div className="inteiro"><dt>Observações</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{aberta.orcamento.observacao}</dd></div>}
+          </dl>
+          <ItensOrcamento itens={aberta.orcamento.itens} total={aberta.orcamento.total} />
+        </Modal>
+      )}
+    </section>
+  );
+}
+
 // RN 51: encadeia a partir de data/início; o item que não cabe mais no dia vai para o dia seguinte, no mesmo início
 function sugerirHorarios(itens, data, inicio) {
   const base = paraMin(inicio);
