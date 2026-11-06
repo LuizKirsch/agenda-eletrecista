@@ -39,12 +39,12 @@ export default function Agenda() {
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
   const [eletricistas, setEletricistas] = useState([]);
-  const [filtro, setFiltro] = useState(''); // RF 1.13: '' = todos
+  const [filtro, setFiltro] = useState([]); // RF 1.13: ids selecionados; vazio = todos
   // { tela: 'os' | 'detalhe' | 'remarcar' | 'arraste', ... }
   const [modal, setModal] = useState(null);
 
   const carregar = useCallback(() => {
-    api(`/agenda?inicio=${segunda}&fim=${somarDias(segunda, 6)}${filtro ? `&eletricista_id=${filtro}` : ''}`)
+    api(`/agenda?inicio=${segunda}&fim=${somarDias(segunda, 6)}${filtro.length ? `&eletricista_id=${filtro.join(',')}` : ''}`)
       .then(setAtividades)
       .catch((err) => setErro(err.message));
   }, [segunda, filtro]);
@@ -126,15 +126,17 @@ export default function Agenda() {
 
   const semanaAtual = segundaDe(hoje());
 
-  // RF 1.13: inativo só aparece com atividade na semana carregada ou se for o filtro atual
+  // RF 1.13: cada chip liga/desliga um eletricista (vários ao mesmo tempo); "Todos" limpa a seleção.
+  // Inativo só aparece com atividade na semana carregada ou se estiver selecionado.
   const comAtividade = new Set(atividades.map((x) => String(x.eletricista?.id)));
+  const alternar = (id) => setFiltro((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
   const chips = (
     <div className="chips-eletricista" role="group" aria-label="Filtrar por eletricista">
-      <button type="button" className="chip" aria-pressed={filtro === ''} onClick={() => setFiltro('')}>Todos</button>
+      <button type="button" className="chip" aria-pressed={!filtro.length} onClick={() => setFiltro([])}>Todos</button>
       {eletricistas
-        .filter((u) => u.ativo || String(u.id) === filtro || comAtividade.has(String(u.id)))
+        .filter((u) => u.ativo || filtro.includes(String(u.id)) || comAtividade.has(String(u.id)))
         .map((u) => (
-          <button key={u.id} type="button" className="chip" aria-pressed={filtro === String(u.id)} onClick={() => setFiltro(String(u.id))}>
+          <button key={u.id} type="button" className="chip" aria-pressed={filtro.includes(String(u.id))} onClick={() => alternar(String(u.id))}>
             {u.nome}{u.ativo ? '' : ' (inativo)'}
           </button>
         ))}

@@ -44,10 +44,10 @@ async function avisoConflito(ids, transaction) {
 // Atividade avulsa (vinda de item avulso do orçamento) não tem tipo: a descrição faz o papel do nome (RF 6.3)
 const tipoResumo = ({ tipo, descricao }) => (tipo ? { id: tipo.id, nome: tipo.nome, ativo: tipo.ativo } : { id: null, nome: descricao, ativo: null });
 
-// eletricistaId opcional filtra a agenda (RF 1.13); o conflito só existe entre atividades do mesmo eletricista
-async function listar(inicio, fim, eletricistaId) {
+// eletricistaIds opcional (lista) filtra a agenda (RF 1.13); o conflito só existe entre atividades do mesmo eletricista
+async function listar(inicio, fim, eletricistaIds) {
   const atividades = await AtividadeOs.findAll({
-    where: { data: { [Op.between]: [inicio, fim] }, ...(eletricistaId && { eletricista_id: eletricistaId }) },
+    where: { data: { [Op.between]: [inicio, fim] }, ...(eletricistaIds && { eletricista_id: { [Op.in]: eletricistaIds } }) },
     include: [
       { model: TipoAtividade, as: 'tipo' },
       { model: Usuario, as: 'eletricista' },
