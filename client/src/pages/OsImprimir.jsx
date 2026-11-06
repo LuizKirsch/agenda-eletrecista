@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { api } from '../api';
 import { NOME_STATUS, statusDaOs } from '../agenda/DetalheAtividade';
 import { dataBr } from '../datas';
@@ -9,6 +9,7 @@ import { IconeImprimir } from '../icones';
 // RF 6.23: documento da OS para imprimir ou salvar como PDF, em qualquer status
 export default function OsImprimir() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [os, setOs] = useState(null);
   const [erro, setErro] = useState('');
 
@@ -27,7 +28,7 @@ export default function OsImprimir() {
           <h1>Ordem de Serviço nº {os.id} <span className={`pilula ${status}`}>{NOME_STATUS[status]}</span></h1>
         </div>
         <div className="acoes-cab nao-imprime">
-          <Link to="/agenda"><button type="button">Voltar</button></Link>
+          <button type="button" onClick={() => navigate('/agenda')}>Voltar</button>
           <button type="button" onClick={() => window.print()}><IconeImprimir />Exportar PDF</button>
         </div>
       </div>
