@@ -4,7 +4,7 @@ const {
 const { httpErro } = require('../middlewares/erros');
 const { paraMin, paraHora } = require('./horario');
 const { avisoConflito } = require('./agenda.service');
-const { validarClienteEndereco } = require('./os.service');
+const { validarClienteEndereco, validarEletricistas } = require('./os.service');
 const { reais } = require('./tipoAtividade.service');
 
 const SO_PENDENTE = {
@@ -161,23 +161,25 @@ async function recusar(id) {
 // Gera a OS com uma atividade agendada por item, cada uma na data e no início escolhidos (podem ser dias diferentes),
 // com a duração do item. Item avulso vira atividade avulsa; tipo desativado entra normalmente. Se alguma não
 // couber no próprio dia, nada muda (RN 51, RN 52).
-function aceitar(id, horarios) {
+function aceitar(id, horarios, eletricistaId) {
   return sequelize.transaction(async (transaction) => {
     const orcamento = await buscar(id, transaction);
     garantirPendente(orcamento, 'status');
     if (horarios.length !== orcamento.itens.length) throw httpErro(400, 'Informe a data e o início de cada item.');
 
+    await validarEletricistas({ eletricista_id: eletricistaId, atividades: horarios }, null, new Map(), transaction);
     const fins = orcamento.itens.map((item, i) => paraMin(horarios[i].hora_inicio) + item.duracao_min);
     const fora = fins.findIndex((fim) => fim > 1439);
     if (fora >= 0) {
       throw httpErro(409, `O ${fora + 1}º item não cabe no dia a partir desse horário. Escolha um início mais cedo ou outro dia.`);
     }
 
-    const os = await OrdemServico.create({ cliente_id: orcamento.cliente_id, endereco_id: orcamento.endereco_id }, { transaction });
+    const os = await OrdemServico.create({ cliente_id: orcamento.cliente_id, endereco_id: orcamento.endereco_id, eletricista_id: eletricistaId }, { transaction });
     const atividades = await AtividadeOs.bulkCreate(orcamento.itens.map((item, i) => ({
       ordem_servico_id: os.id,
       tipo_atividade_id: item.tipo_atividade_id,
       descricao: item.tipo_atividade_id ? null : item.descricao,
+      eletricista_id: horarios[i].eletricista_id,
       sequencia: i + 1,
       data: horarios[i].data,
       hora_inicio: horarios[i].hora_inicio,

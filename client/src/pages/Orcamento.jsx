@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
+import { carregarEletricistas, oferecer } from '../eletricistas';
 import Modal, { Confirmar } from '../agenda/Modal';
 import {
   hoje, paraHora, paraMin, somarDias,
@@ -154,6 +155,8 @@ const fimDe = (horario, item) => (horario.hora_inicio ? paraMin(horario.hora_ini
 
 function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
   const { itens } = orcamento;
+  const [eletricistas, setEletricistas] = useState([]);
+  const [eletricistaId, setEletricistaId] = useState('');
   const [data, setData] = useState(hoje());
   const [inicio, setInicio] = useState('08:00');
   const [horarios, setHorarios] = useState(() => sugerirHorarios(itens, hoje(), '08:00'));
@@ -166,9 +169,13 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
     if (novaData && novoInicio) setHorarios(sugerirHorarios(itens, novaData, novoInicio));
   }
 
+  useEffect(() => {
+    carregarEletricistas().then(setEletricistas).catch((err) => setErro(err.message));
+  }, []);
+
   const alterar = (i, campos) => setHorarios((atuais) => atuais.map((h, n) => (n === i ? { ...h, ...campos } : h)));
   const fins = itens.map((item, i) => fimDe(horarios[i], item));
-  const valido = horarios.every((h, i) => h.data && fins[i] !== null && fins[i] <= 1439);
+  const valido = eletricistaId && horarios.every((h, i) => h.data && fins[i] !== null && fins[i] <= 1439);
   const dias = new Set(horarios.map((h) => h.data)).size;
 
   async function aceitar(e) {
@@ -176,7 +183,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
     setErro('');
     setEnviando(true);
     try {
-      const resposta = await api(`/orcamentos/${orcamento.id}/aceitar`, { method: 'POST', body: { atividades: horarios } });
+      const resposta = await api(`/orcamentos/${orcamento.id}/aceitar`, { method: 'POST', body: { eletricista_id: eletricistaId, atividades: horarios.map((h) => ({ ...h, eletricista_id: h.eletricista_id || eletricistaId })) } });
       onAceito({ ...resposta, data: horarios[0].data });
     } catch (err) {
       setErro(err.message);
@@ -202,6 +209,13 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
         <p className="suave" style={{ fontSize: 13 }}>
           Será criada uma OS com uma atividade por item, em sequência a partir do início escolhido. O item que não couber no dia vai para o dia seguinte, no mesmo horário; ajuste a data e o início de cada um se precisar. Depois de aceito, o orçamento não pode mais ser editado.
         </p>
+        <label>
+          Eletricista responsável
+          <select value={eletricistaId} onChange={(e) => setEletricistaId(e.target.value)} required>
+            <option value="" disabled>Selecione</option>
+            {oferecer(eletricistas).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+          </select>
+        </label>
         <label className="c3 meia">Começa em<input type="date" value={data} onChange={(e) => mudarInicioGeral(e.target.value, inicio)} required /></label>
         <label className="c3 meia">Início<input type="time" value={inicio} onChange={(e) => mudarInicioGeral(data, e.target.value)} required /></label>
 
@@ -217,6 +231,13 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
                   <span className="numero">{i + 1}</span>
                   <strong className="avulsa">{item.descricao} <span className="suave" style={{ fontWeight: 400 }}>· {formatarDuracao(item.duracao_min)}</span></strong>
                 </div>
+                <label className="inteira">
+                  Eletricista
+                  <select value={horarios[i].eletricista_id || eletricistaId} onChange={(e) => alterar(i, { eletricista_id: e.target.value })} required>
+                    <option value="" disabled>Selecione</option>
+                    {oferecer(eletricistas).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                  </select>
+                </label>
                 <label className="data">Data<input type="date" value={horarios[i].data} onChange={(e) => alterar(i, { data: e.target.value })} required /></label>
                 <label>Início<input type="time" value={horarios[i].hora_inicio} onChange={(e) => alterar(i, { hora_inicio: e.target.value })} required /></label>
                 <label>Fim<input type="time" value={cabe ? paraHora(fins[i]) : ''} disabled /></label>

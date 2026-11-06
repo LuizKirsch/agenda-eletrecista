@@ -62,6 +62,7 @@ export default function ListaSemana({ segunda, atividades, onSemanaAnterior, onP
                     <span className="info">
                       <strong>{a.cliente.nome}</strong>
                       <span>{a.tipo.nome}{a.endereco?.cidade ? ` · ${a.endereco.cidade}` : ''}</span>
+                      {a.eletricista && <span>Eletricista: {a.eletricista.nome}</span>}
                       {a.status === 'cancelada' && <span>Cancelada</span>}
                       {a.status === 'concluida' && <span>Concluída</span>}
                       {a.conflito && !encerrada && <span className="alerta-conflito"><IconeAlerta tamanho={12} />Conflito de horário</span>}

@@ -22,6 +22,8 @@ function lerOs(body) {
   if (!clienteId) throw httpErro(400, 'Selecione o cliente.');
   const enderecoId = lerId(body.endereco_id);
   if (!enderecoId) throw httpErro(400, 'Selecione o endereço.');
+  const eletricistaId = lerId(body.eletricista_id);
+  if (!eletricistaId) throw httpErro(400, 'Selecione o eletricista responsável.');
   const observacao = typeof body.observacao === 'string' && body.observacao.trim() ? body.observacao.trim() : null;
   if (!Array.isArray(body.atividades) || !body.atividades.length) throw httpErro(400, 'Adicione ao menos uma atividade.');
 
@@ -31,9 +33,10 @@ function lerOs(body) {
     const tipoId = lerId(linha?.tipo_atividade_id);
     // sem tipo só a atividade avulsa já existente; o service confere
     if (!tipoId && !id) throw httpErro(400, `Selecione o tipo de atividade${sufixo}.`);
-    return { id, tipo_atividade_id: tipoId, ...lerHorario(linha, sufixo) };
+    // sem eletricista na linha, a atividade herda o responsável da OS (RF 6.22)
+    return { id, tipo_atividade_id: tipoId, eletricista_id: lerId(linha?.eletricista_id) ?? eletricistaId, ...lerHorario(linha, sufixo) };
   });
-  return { cliente_id: clienteId, endereco_id: enderecoId, observacao, atividades };
+  return { cliente_id: clienteId, endereco_id: enderecoId, eletricista_id: eletricistaId, observacao, atividades };
 }
 
 async function detalhar(req, res) {

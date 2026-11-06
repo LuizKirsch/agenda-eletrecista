@@ -1,16 +1,17 @@
 const { Op, fn, col } = require('sequelize');
-const { AtividadeOs, OrdemServico, Cliente, Endereco, TipoAtividade } = require('../models');
+const { AtividadeOs, OrdemServico, Cliente, Endereco, TipoAtividade, Usuario } = require('../models');
 
 const hhmm = (hora) => String(hora).slice(0, 5);
 
-// Único ponto da regra de conflito (RN 10, RF 1.20): mesma data, ambas não canceladas e intervalos
+// Único ponto da regra de conflito (RN 10, RF 6.12): mesmo eletricista, mesma data, ambas não canceladas e intervalos
 // sobrepostos. Encostadas (fim de uma = início da outra) não conflitam.
 function idsEmConflito(atividades) {
   const porDia = new Map();
   for (const a of atividades) {
     if (a.status === 'cancelada') continue;
-    if (!porDia.has(a.data)) porDia.set(a.data, []);
-    porDia.get(a.data).push(a);
+    const chave = `${a.eletricista_id}|${a.data}`;
+    if (!porDia.has(chave)) porDia.set(chave, []);
+    porDia.get(chave).push(a);
   }
   const ids = new Set();
   for (const doDia of porDia.values()) {
@@ -43,11 +44,13 @@ async function avisoConflito(ids, transaction) {
 // Atividade avulsa (vinda de item avulso do orçamento) não tem tipo: a descrição faz o papel do nome (RF 6.3)
 const tipoResumo = ({ tipo, descricao }) => (tipo ? { id: tipo.id, nome: tipo.nome, ativo: tipo.ativo } : { id: null, nome: descricao, ativo: null });
 
-async function listar(inicio, fim) {
+// eletricistaId opcional filtra a agenda (RF 1.13); o conflito só existe entre atividades do mesmo eletricista
+async function listar(inicio, fim, eletricistaId) {
   const atividades = await AtividadeOs.findAll({
-    where: { data: { [Op.between]: [inicio, fim] } },
+    where: { data: { [Op.between]: [inicio, fim] }, ...(eletricistaId && { eletricista_id: eletricistaId }) },
     include: [
       { model: TipoAtividade, as: 'tipo' },
+      { model: Usuario, as: 'eletricista' },
       {
         model: OrdemServico,
         as: 'os',
@@ -76,6 +79,7 @@ async function listar(inicio, fim) {
     hora_inicio: hhmm(a.hora_inicio),
     hora_fim: hhmm(a.hora_fim),
     status: a.status,
+    eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome },
     conflito: conflitos.has(a.id),
     cliente: { id: a.os.cliente.id, nome: a.os.cliente.nome },
     endereco: a.os.endereco,

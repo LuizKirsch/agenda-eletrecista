@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
-const { Usuario } = require('../models');
+const { Usuario, OrdemServico, AtividadeOs } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 
 const CAMPOS_PUBLICOS = ['id', 'nome', 'login', 'perfil', 'ativo'];
@@ -51,7 +51,11 @@ async function atualizar(id, { nome, login, senha, perfil, ativo }, logado) {
 
 async function excluir(id, logado) {
   if (ehOProprio(id, logado)) throw httpErro(400, 'Você não pode excluir o próprio usuário.');
-  await (await buscar(id)).destroy();
+  const usuario = await buscar(id);
+  // RN 64 / RF 2.14: com vínculo só desativa
+  const vinculos = await OrdemServico.count({ where: { eletricista_id: usuario.id } }) + await AtividadeOs.count({ where: { eletricista_id: usuario.id } });
+  if (vinculos) throw httpErro(409, 'Este eletricista tem ordens de serviço ou atividades vinculadas e não pode ser excluído. Desative-o.');
+  await usuario.destroy();
 }
 
 module.exports = { listar, criar, atualizar, excluir };

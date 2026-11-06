@@ -63,16 +63,18 @@ async function recusar(req, res) {
   res.json(await orcamentoService.recusar(req.params.id));
 }
 
-// body: { atividades: [{ data, hora_inicio }] }, uma por item, na ordem dos itens (RN 51)
+// body: { eletricista_id, atividades: [{ data, hora_inicio, eletricista_id? }] }, uma por item, na ordem dos itens (RN 51)
 async function aceitar(req, res) {
+  const eletricistaId = lerId(req.body?.eletricista_id);
+  if (!eletricistaId) throw httpErro(400, 'Selecione o eletricista responsável.');
   const lista = req.body?.atividades;
   if (!Array.isArray(lista) || !lista.length) throw httpErro(400, 'Informe a data e o início de cada item.');
   const horarios = lista.map((h, i) => {
     if (!ehData(h?.data)) throw httpErro(400, `Preencha o campo Data (${i + 1}º item).`);
     if (!ehHora(h.hora_inicio)) throw httpErro(400, `Preencha o campo Início (${i + 1}º item).`);
-    return { data: h.data, hora_inicio: h.hora_inicio };
+    return { data: h.data, hora_inicio: h.hora_inicio, eletricista_id: lerId(h.eletricista_id) ?? eletricistaId };
   });
-  res.json(await orcamentoService.aceitar(req.params.id, horarios));
+  res.json(await orcamentoService.aceitar(req.params.id, horarios, eletricistaId));
 }
 
 async function listarVersoes(req, res) {

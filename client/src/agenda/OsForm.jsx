@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { hoje, paraHora, paraMin } from '../datas';
+import { carregarEletricistas, oferecer } from '../eletricistas';
 import { formatarDataHora } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
 import Modal from './Modal';
@@ -15,15 +16,17 @@ function fimPara(inicio, tipo) {
 const SEM_TIPO_ATIVO = 'Não há tipos de atividade ativos. Cadastre ou reative um tipo para criar uma OS.';
 
 // RF 1.9: nova linha começa no fim da anterior, na mesma data; o tipo fica para o usuário escolher
-function linhaApos(anterior, tipos, chave) {
+function linhaApos(anterior, tipos, chave, eletricistaId) {
   if (!tipos.some((t) => t.ativo)) return null;
-  return { chave, tipo_atividade_id: '', data: anterior.data, hora_inicio: anterior.hora_fim, hora_fim: '' };
+  return { chave, tipo_atividade_id: '', data: anterior.data, hora_inicio: anterior.hora_fim, hora_fim: '', eletricista_id: eletricistaId };
 }
 
 export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, onFechar, onSalvo }) {
   const [tipos, setTipos] = useState(null);
   const [clienteId, setClienteId] = useState('');
   const [enderecoId, setEnderecoId] = useState('');
+  const [eletricistas, setEletricistas] = useState([]);
+  const [eletricistaId, setEletricistaId] = useState('');
   const [observacoesEndereco, setObservacoesEndereco] = useState([]);
   const [observacao, setObservacao] = useState('');
   const [linhas, setLinhas] = useState([]);
@@ -37,26 +40,28 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   const tipoPorId = (id) => tipos?.find((t) => String(t.id) === String(id));
 
   useEffect(() => {
-    Promise.all([api('/tipos-atividade'), osId ? api(`/os/${osId}`) : null])
-      .then(([listaTipos, os]) => {
+    Promise.all([api('/tipos-atividade'), osId ? api(`/os/${osId}`) : null, carregarEletricistas()])
+      .then(([listaTipos, os, listaEletricistas]) => {
+        setEletricistas(listaEletricistas);
         setTipos(listaTipos);
         if (os) {
           setClienteId(String(os.cliente.id));
           setOrcamentoId(os.orcamento_id);
           setEnderecoId(os.endereco ? String(os.endereco.id) : '');
           setObservacao(os.observacao ?? '');
+          setEletricistaId(os.eletricista ? String(os.eletricista.id) : '');
           const existentes = os.atividades.map((a) => ({
             // atividade avulsa (item avulso do orçamento) não tem tipo e mantém a descrição (RF 6.3)
             chave: novaChave(), id: a.id, tipoOriginal: a.tipo.id, tipo_atividade_id: a.tipo.id ? String(a.tipo.id) : '', avulsa: a.tipo.id ? null : a.tipo.nome,
-            data: a.data, hora_inicio: a.hora_inicio, hora_fim: a.hora_fim,
+            data: a.data, hora_inicio: a.hora_inicio, hora_fim: a.hora_fim, eletricista_id: a.eletricista ? String(a.eletricista.id) : '',
             // RN 9: concluída/cancelada fica só leitura na edição
             encerrada: a.status === 'agendada' ? null : a.status, nome: a.tipo.nome,
           }));
-          const nova = adicionarAtividade && linhaApos(existentes[existentes.length - 1], listaTipos, novaChave());
+          const nova = adicionarAtividade && linhaApos(existentes[existentes.length - 1], listaTipos, novaChave(), os.eletricista ? String(os.eletricista.id) : '');
           setLinhas(nova ? [...existentes, nova] : existentes);
         } else {
           setLinhas([{
-            chave: novaChave(), tipo_atividade_id: '', data: data ?? hoje(), hora_inicio: hora ?? '08:00', hora_fim: '',
+            chave: novaChave(), tipo_atividade_id: '', data: data ?? hoje(), hora_inicio: hora ?? '08:00', hora_fim: '', eletricista_id: '',
           }]);
         }
       })
@@ -81,12 +86,18 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   }
 
   function adicionarLinha() {
-    const nova = linhaApos(linhas[linhas.length - 1], tipos, novaChave());
+    const nova = linhaApos(linhas[linhas.length - 1], tipos, novaChave(), eletricistaId);
     if (nova) {
       setLinhas([...linhas, nova]);
       setAlterado(true);
     }
     else setErro(SEM_TIPO_ATIVO);
+  }
+
+  // RF 6.22: a atividade acompanha o responsável da OS enquanto não for alterada por atividade
+  function trocarResponsavel(novo) {
+    setLinhas((atuais) => atuais.map((l) => (!l.encerrada && (!l.eletricista_id || l.eletricista_id === eletricistaId) ? { ...l, eletricista_id: novo } : l)));
+    setEletricistaId(novo);
   }
 
   async function salvar(e) {
@@ -98,7 +109,8 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
       cliente_id: clienteId,
       endereco_id: enderecoId,
       observacao,
-      atividades: linhas.map(({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim }) => ({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim })),
+      eletricista_id: eletricistaId,
+      atividades: linhas.map(({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim, eletricista_id }) => ({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim, eletricista_id: eletricista_id || eletricistaId })),
     };
     try {
       onSalvo(await api(osId ? `/os/${osId}` : '/os', { method: osId ? 'PUT' : 'POST', body }));
@@ -127,6 +139,14 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
           {/* RN 57: OS gerada por orçamento não troca de cliente */}
           <SeletorClienteEndereco clienteId={clienteId} enderecoId={enderecoId} onCliente={setClienteId} onEndereco={setEnderecoId} bloqueado={!!orcamentoId} />
           {orcamentoId && <span className="dica">OS gerada pelo orçamento nº {orcamentoId}; o cliente não pode ser trocado.</span>}
+
+          <label>
+            Eletricista responsável
+            <select value={eletricistaId} onChange={(e) => trocarResponsavel(e.target.value)} required>
+              <option value="" disabled>Selecione</option>
+              {oferecer(eletricistas, eletricistaId).map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
+            </select>
+          </label>
 
           {observacoesEndereco.length > 0 && (
             <details className="obs-endereco" open>
@@ -166,6 +186,13 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
                     </button>
                   )}
                 </div>
+                <label className="inteira">
+                  Eletricista
+                  <select value={l.eletricista_id} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { eletricista_id: e.target.value })} required>
+                    <option value="" disabled>Selecione</option>
+                    {oferecer(eletricistas, l.eletricista_id).map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
+                  </select>
+                </label>
                 <label className="data">Data<input type="date" value={l.data} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { data: e.target.value })} required /></label>
                 <label>Início<input type="time" value={l.hora_inicio} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { hora_inicio: e.target.value })} required /></label>
                 <label>Fim<input type="time" value={l.hora_fim} disabled={!!l.encerrada} onChange={(e) => alterarLinha(l.chave, { hora_fim: e.target.value })} required /></label>
