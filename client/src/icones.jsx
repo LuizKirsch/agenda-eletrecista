@@ -26,3 +26,4 @@ export const IconeBusca = (p) => <Icone {...p}><circle cx="11" cy="11" r="7" /><
 
 // Iniciais para o avatar ("Roberto Lima" -> "RL")
 export const iniciais = (nome = '') => nome.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+export const IconeImprimir = (p) => <Icone {...p}><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M6 14h12v7H6z" /></Icone>;

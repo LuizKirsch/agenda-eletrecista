@@ -600,3 +600,10 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .grupo-atividades { display: grid; gap: 10px; }
 
 @media (max-width: 767px) { .so-computador { display: none; } }
+
+/* RF 4.18: impressão do orçamento (salvar como PDF); RN 66 */
+@media print {
+  .lateral, .topo-celular, .nao-imprime { display: none !important; }
+  body, .conteudo { background: #fff; padding: 0; }
+  .tabela { overflow: visible; }
+}
