@@ -212,6 +212,7 @@ export default function Grade({ segunda, atividades, onNovaOs, onAbrir, onSoltar
                 >
                   <span className="t">{paraHora(u.ini)}–{paraHora(u.fim)}</span>
                   <span className="c">{a.cliente.nome}</span>
+                  {u.itens.length === 1 && a.eletricista && <span className="t">{a.eletricista.nome}</span>}
                   {u.itens.length === 1 ? (
                     <span className="t">
                       {a.tipo.nome}

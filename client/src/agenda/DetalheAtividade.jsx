@@ -91,6 +91,7 @@ export default function DetalheAtividade({
         {os.endereco && (
           <div className="linha-icone"><IconeLocal tamanho={16} /><span>{os.endereco.identificacao ? `${os.endereco.identificacao} · ` : ''}{formatarEndereco(os.endereco)}</span></div>
         )}
+        {os.eletricista && <div className="linha-icone"><span><span className="suave">Eletricista responsável:</span> {os.eletricista.nome}</span></div>}
         {os.observacao && <div className="linha-icone nota"><IconeBalao tamanho={16} /><span>{os.observacao}</span></div>}
       </section>
 
@@ -106,7 +107,7 @@ export default function DetalheAtividade({
                   <span className="numero">{x.sequencia}</span>
                   <span className="info">
                     <strong>{x.tipo.nome}</strong>
-                    <small>{nomeDia(x.data).toLowerCase()}, {dataBr(x.data)} · {x.hora_inicio} – {x.hora_fim}</small>
+                    <small>{nomeDia(x.data).toLowerCase()}, {dataBr(x.data)} · {x.hora_inicio} – {x.hora_fim}{x.eletricista ? ` · ${x.eletricista.nome}` : ''}</small>
                   </span>
                   <span className={`pilula ${x.status}`}>{NOME_STATUS[x.status]}</span>
                 </button>

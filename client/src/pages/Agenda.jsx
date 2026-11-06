@@ -10,6 +10,7 @@ import RemarcarAtividade from '../agenda/RemarcarAtividade';
 import {
   dataBr, hoje, paraHora, paraMin, rotuloSemana, segundaDe, somarDias,
 } from '../datas';
+import { carregarEletricistas } from '../eletricistas';
 import { IconeAlerta, IconeDireita, IconeEsquerda, IconeMais } from '../icones';
 
 // Celular (< 768 px): lista no lugar da grade
@@ -37,14 +38,20 @@ export default function Agenda() {
   const [atividades, setAtividades] = useState([]);
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  const [eletricistas, setEletricistas] = useState([]);
+  const [filtro, setFiltro] = useState(''); // RF 1.13: '' = todos
   // { tela: 'os' | 'detalhe' | 'remarcar' | 'arraste', ... }
   const [modal, setModal] = useState(null);
 
   const carregar = useCallback(() => {
-    api(`/agenda?inicio=${segunda}&fim=${somarDias(segunda, 6)}`)
+    api(`/agenda?inicio=${segunda}&fim=${somarDias(segunda, 6)}${filtro ? `&eletricista_id=${filtro}` : ''}`)
       .then(setAtividades)
       .catch((err) => setErro(err.message));
-  }, [segunda]);
+  }, [segunda, filtro]);
+
+  useEffect(() => {
+    carregarEletricistas().then(setEletricistas).catch((err) => setErro(err.message));
+  }, []);
 
   useEffect(() => {
     carregar();
@@ -119,6 +126,13 @@ export default function Agenda() {
 
   const semanaAtual = segundaDe(hoje());
 
+  const seletorEletricista = (
+    <select aria-label="Filtrar por eletricista" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+      <option value="">Todos os eletricistas</option>
+      {eletricistas.map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
+    </select>
+  );
+
   const anterior = () => setSegunda(somarDias(segunda, -7));
   const proxima = () => setSegunda(somarDias(segunda, 7));
 
@@ -136,9 +150,13 @@ export default function Agenda() {
           )}
         </div>
         {celular ? (
-          <button type="button" onClick={() => setSegunda(semanaAtual)}>Hoje</button>
+          <>
+            <button type="button" onClick={() => setSegunda(semanaAtual)}>Hoje</button>
+            {seletorEletricista}
+          </>
         ) : (
           <div className="acoes-cab">
+            {seletorEletricista}
             <div className="legenda">
               <span><i className="cor agendada" /> Agendada</span>
               <span><i className="cor encerrada" /> Concluída / cancelada</span>
