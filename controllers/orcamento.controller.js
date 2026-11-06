@@ -74,7 +74,7 @@ async function aceitar(req, res) {
     if (!ehHora(h.hora_inicio)) throw httpErro(400, `Preencha o campo Início (${i + 1}º item).`);
     return { data: h.data, hora_inicio: h.hora_inicio, eletricista_id: lerId(h.eletricista_id) ?? eletricistaId };
   });
-  res.json(await orcamentoService.aceitar(req.params.id, horarios, eletricistaId));
+  res.json(await orcamentoService.aceitar(req.params.id, horarios, eletricistaId, req.body.confirmar_conflito === true));
 }
 
 // body: { data, hora_inicio, eletricista_id, atividades?: [{ eletricista_id?, data?, hora_inicio? }], a_partir_de?: n }

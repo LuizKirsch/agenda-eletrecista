@@ -163,7 +163,7 @@ async function recusar(id) {
 // Gera a OS com uma atividade agendada por item, cada uma na data e no início escolhidos (podem ser dias diferentes),
 // com a duração do item. Item avulso vira atividade avulsa; tipo desativado entra normalmente. Se alguma não
 // couber no próprio dia, nada muda (RN 51, RN 52).
-function aceitar(id, horarios, eletricistaId) {
+function aceitar(id, horarios, eletricistaId, confirmarConflito = false) {
   return sequelize.transaction(async (transaction) => {
     const orcamento = await buscar(id, transaction);
     garantirPendente(orcamento, 'status');
@@ -189,8 +189,14 @@ function aceitar(id, horarios, eletricistaId) {
       status: 'agendada',
     })), { transaction });
 
+    // RN 68: com conflito no confirmar, avisa ANTES de gerar a OS; o erro desfaz a transação.
+    // Gerar mesmo assim (RN 11: conflito não bloqueia) exige confirmar_conflito.
+    const conflito = await avisoConflito(atividades.map((a) => a.id), transaction);
+    if (conflito && !confirmarConflito) {
+      throw Object.assign(httpErro(409, 'Algum horário passou a conflitar com outra atividade do eletricista. Recalcule os horários ou gere a OS mesmo assim.'), { codigo: 'conflito' });
+    }
     await orcamento.update({ status: 'aceito', ordem_servico_id: os.id }, { transaction });
-    return { os_id: os.id, aviso_conflito: await avisoConflito(atividades.map((a) => a.id), transaction) };
+    return { os_id: os.id, aviso_conflito: conflito };
   });
 }
 

@@ -29,7 +29,8 @@ function lerCampos(body, campos) {
 // eslint-disable-next-line no-unused-vars
 function tratarErros(err, req, res, next) {
   if (!err.publico) console.error(err);
-  res.status(err.status || 500).json({ erro: err.publico ? err.message : MENSAGEM_GENERICA });
+  // codigo: identifica para o front um erro que pede ação (ex.: 'conflito' no aceite do orçamento, RN 68)
+  res.status(err.status || 500).json({ erro: err.publico ? err.message : MENSAGEM_GENERICA, ...(err.publico && err.codigo && { codigo: err.codigo }) });
 }
 
 module.exports = { httpErro, exigirCampos, lerCampos, tratarErros };

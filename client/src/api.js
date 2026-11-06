@@ -22,6 +22,6 @@ export async function api(caminho, { method = 'GET', body } = {}) {
   if (res.status === 204) return null;
 
   const dados = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(dados.erro || MENSAGEM_GENERICA);
+  if (!res.ok) throw Object.assign(new Error(dados.erro || MENSAGEM_GENERICA), { status: res.status, codigo: dados.codigo });
   return dados;
 }

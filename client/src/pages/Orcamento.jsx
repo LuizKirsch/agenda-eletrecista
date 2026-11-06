@@ -253,6 +253,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [calculando, setCalculando] = useState(false);
+  const [conflito, setConflito] = useState(false); // RN 68
   const [gatilho, setGatilho] = useState(0);
   const pedido = useRef(null); // menor índice a recalcular enquanto o debounce espera
   const atual = useRef({});
@@ -320,15 +321,25 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
   const valido = eletricistaId && horarios.every((h, i) => h.data && fins[i] !== null && fins[i] <= 1439);
   const dias = new Set(horarios.map((h) => h.data).filter(Boolean)).size;
 
-  async function aceitar(e) {
-    e.preventDefault();
+  // RN 68: se o confirmar achar conflito novo, a API recusa (codigo 'conflito') e a tela pergunta antes de gerar a OS
+  async function aceitar(e, confirmarConflito = false) {
+    e?.preventDefault();
     setErro('');
+    setConflito(false);
     setEnviando(true);
     try {
-      const resposta = await api(`/orcamentos/${orcamento.id}/aceitar`, { method: 'POST', body: { eletricista_id: eletricistaId, atividades: horarios.map((h) => ({ ...h, eletricista_id: h.eletricista_id || eletricistaId })) } });
+      const resposta = await api(`/orcamentos/${orcamento.id}/aceitar`, {
+        method: 'POST',
+        body: {
+          eletricista_id: eletricistaId,
+          atividades: horarios.map((h) => ({ ...h, eletricista_id: h.eletricista_id || eletricistaId })),
+          confirmar_conflito: confirmarConflito,
+        },
+      });
       onAceito({ ...resposta, data: horarios[0].data });
     } catch (err) {
-      setErro(err.message);
+      if (err.codigo === 'conflito') setConflito(true);
+      else setErro(err.message);
       setEnviando(false);
     }
   }
@@ -386,6 +397,15 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
           })}
         </div>
         {erro && <p className="erro" role="alert">{erro}</p>}
+        {conflito && (
+          <div className="aviso" role="alert">
+            <p style={{ margin: '0 0 8px' }}>Algum horário passou a conflitar com outra atividade do eletricista desde a recomendação.</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" disabled={enviando} onClick={() => { setConflito(false); recalcular(0); }}>Recalcular horários</button>
+              <button type="button" className="primario" disabled={enviando} onClick={() => aceitar(null, true)}>Gerar OS mesmo assim</button>
+            </div>
+          </div>
+        )}
       </form>
     </Modal>
   );
