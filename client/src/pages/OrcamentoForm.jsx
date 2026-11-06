@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import Modal from '../agenda/Modal';
-import { formatarEndereco, formatarReais } from '../formato';
+import SeletorClienteEndereco from '../agenda/SeletorClienteEndereco';
+import { formatarReais } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
 
 // RF 4.9: tempo sugerido = quantidade × duração padrão do tipo, dentro de 5 a 720 min
@@ -15,9 +16,7 @@ const centavos = (i) => (Number(i.quantidade) || 0) * Math.round((Number(i.valor
 
 export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
   const [tipos, setTipos] = useState(null);
-  const [clientes, setClientes] = useState([]);
   const [clienteId, setClienteId] = useState(orcamento ? String(orcamento.cliente.id) : '');
-  const [enderecos, setEnderecos] = useState([]);
   const [enderecoId, setEnderecoId] = useState(orcamento ? String(orcamento.endereco.id) : '');
   const [observacao, setObservacao] = useState(orcamento?.observacao ?? '');
   const [itens, setItens] = useState([]);
@@ -32,9 +31,8 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
   const tiposDoOrcamento = new Set(orcamento?.itens.filter((i) => i.tipo).map((i) => String(i.tipo.id)));
 
   useEffect(() => {
-    Promise.all([api('/clientes'), api('/tipos-atividade')])
-      .then(([listaClientes, listaTipos]) => {
-        setClientes(listaClientes);
+    Promise.all([api('/tipos-atividade')])
+      .then(([listaTipos]) => {
         setTipos(listaTipos);
         setItens(orcamento
           ? orcamento.itens.map((i) => ({
@@ -49,16 +47,6 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
       })
       .catch((err) => setErro(err.message));
   }, [orcamento]);
-
-  useEffect(() => {
-    setEnderecos([]);
-    if (!clienteId) return undefined;
-    let cancelado = false;
-    api(`/clientes/${clienteId}`)
-      .then((c) => { if (!cancelado) setEnderecos(c.enderecos); })
-      .catch((err) => { if (!cancelado) setErro(err.message); });
-    return () => { cancelado = true; };
-  }, [clienteId]);
 
   function alterarItem(chaveItem, campos) {
     setItens((atuais) => atuais.map((i) => {
@@ -78,6 +66,7 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
   async function salvar(e) {
     e.preventDefault();
     setErro('');
+    if (!clienteId) { setErro('Selecione o cliente.'); return; }
     setEnviando(true);
     const body = {
       cliente_id: clienteId,
@@ -113,23 +102,7 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
       {!tipos && !erro && <p className="carregando">Carregando…</p>}
       {tipos && (
         <form id="form-orcamento" className="campos" onSubmit={salvar} onChange={() => setAlterado(true)}>
-          <label>
-            Cliente
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} required>
-              <option value="" disabled>Selecione</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
-            </select>
-          </label>
-
-          <label>
-            Endereço
-            <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId} required>
-              <option value="" disabled>{clienteId && !enderecos.length ? 'Cliente sem endereço cadastrado' : 'Selecione'}</option>
-              {enderecos.map((en) => (
-                <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
-              ))}
-            </select>
-          </label>
+          <SeletorClienteEndereco clienteId={clienteId} enderecoId={enderecoId} onCliente={setClienteId} onEndereco={setEnderecoId} />
 
           <div className="grupo-atividades">
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Itens de serviço</span>

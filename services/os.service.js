@@ -25,11 +25,11 @@ async function buscarAtividade(id, transaction) {
 
 async function validarClienteEndereco({ cliente_id: clienteId, endereco_id: enderecoId }, transaction) {
   if (!await Cliente.findByPk(clienteId, { transaction })) throw httpErro(404, 'Cliente não encontrado.');
-  if (enderecoId) {
-    const endereco = await Endereco.findByPk(enderecoId, { transaction });
-    if (!endereco || String(endereco.cliente_id) !== String(clienteId)) {
-      throw httpErro(400, 'O endereço não pertence ao cliente selecionado.');
-    }
+  // RF 6.1 / RN 34: endereço obrigatório e do cliente da OS
+  if (!enderecoId) throw httpErro(400, 'Selecione o endereço.');
+  const endereco = await Endereco.findByPk(enderecoId, { transaction });
+  if (!endereco || String(endereco.cliente_id) !== String(clienteId)) {
+    throw httpErro(400, 'O endereço não pertence ao cliente selecionado.');
   }
 }
 
