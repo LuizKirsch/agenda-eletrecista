@@ -1,30 +1,26 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../auth';
-import Modal from '../agenda/Modal';
+import Modal, { Confirmar } from '../agenda/Modal';
 import { IconeEditar, IconeLixo, IconeMais, iniciais } from '../icones';
 import { PERFIS } from './Layout';
 
 export default function Usuarios() {
   const { usuario: logado } = useAuth();
-  const ehSecretaria = logado.perfil === 'secretaria'; // editar/excluir: só a secretária
+  const ehSecretaria = logado.perfil === 'secretaria'; // cadastrar/editar/excluir: só a secretária
   const [usuarios, setUsuarios] = useState([]);
   const [form, setForm] = useState(null); // null | { usuario?: {...} }
+  const [excluindo, setExcluindo] = useState(null);
   const [erro, setErro] = useState('');
 
   useEffect(() => {
     api('/usuarios').then(setUsuarios).catch((err) => setErro(err.message));
   }, []);
 
-  async function excluir(u) {
-    if (!window.confirm(`Excluir ${u.nome}?`)) return;
-    setErro('');
-    try {
-      await api(`/usuarios/${u.id}`, { method: 'DELETE' });
-      setUsuarios((lista) => lista.filter((x) => x.id !== u.id));
-    } catch (err) {
-      setErro(err.message);
-    }
+  async function excluir() {
+    await api(`/usuarios/${excluindo.id}`, { method: 'DELETE' });
+    setUsuarios((lista) => lista.filter((x) => x.id !== excluindo.id));
+    setExcluindo(null);
   }
 
   function salvo(u) {
@@ -39,7 +35,7 @@ export default function Usuarios() {
           <h1>Usuários</h1>
           <p className="suave">Quem tem acesso ao sistema.</p>
         </div>
-        <button type="button" className="primario" onClick={() => setForm({})}><IconeMais />Novo usuário</button>
+        {ehSecretaria && <button type="button" className="primario" onClick={() => setForm({})}><IconeMais />Novo usuário</button>}
       </div>
 
       {erro && <p className="erro" role="alert" style={{ marginBottom: 16 }}>{erro}</p>}
@@ -75,7 +71,7 @@ export default function Usuarios() {
                       <>
                         <button type="button" className="icone-botao discreto" aria-label={`Editar ${u.nome}`} onClick={() => { setErro(''); setForm({ usuario: u }); }}><IconeEditar /></button>
                         {u.id !== logado.id && (
-                          <button type="button" className="icone-botao discreto perigo" aria-label={`Excluir ${u.nome}`} onClick={() => excluir(u)}><IconeLixo /></button>
+                          <button type="button" className="icone-botao discreto perigo" aria-label={`Excluir ${u.nome}`} onClick={() => { setErro(''); setExcluindo(u); }}><IconeLixo /></button>
                         )}
                       </>
                     )}
@@ -85,6 +81,12 @@ export default function Usuarios() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {excluindo && (
+        <Confirmar titulo="Excluir usuário" subtitulo={excluindo.nome} rotulo="Excluir usuário" rotuloEnviando="Excluindo…" onFechar={() => setExcluindo(null)} onConfirmar={excluir}>
+          O usuário será excluído e perderá o acesso ao sistema. Essa ação não pode ser desfeita.
+        </Confirmar>
       )}
 
       {form && <FormUsuario editando={form.usuario} proprio={form.usuario?.id === logado.id} onFechar={() => setForm(null)} onSalvo={salvo} />}
