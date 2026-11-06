@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { hoje, paraHora, paraMin } from '../datas';
-import { formatarDataHora, formatarEndereco } from '../formato';
+import { formatarDataHora } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
 import Modal from './Modal';
+import SeletorClienteEndereco from './SeletorClienteEndereco';
 
 // Fim = início + duração padrão do tipo (RF 1.8, RN 2)
 function fimPara(inicio, tipo) {
@@ -21,9 +22,7 @@ function linhaApos(anterior, tipos, chave) {
 
 export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, onFechar, onSalvo }) {
   const [tipos, setTipos] = useState(null);
-  const [clientes, setClientes] = useState([]);
   const [clienteId, setClienteId] = useState('');
-  const [enderecos, setEnderecos] = useState([]);
   const [enderecoId, setEnderecoId] = useState('');
   const [observacoesEndereco, setObservacoesEndereco] = useState([]);
   const [observacao, setObservacao] = useState('');
@@ -38,9 +37,8 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   const tipoPorId = (id) => tipos?.find((t) => String(t.id) === String(id));
 
   useEffect(() => {
-    Promise.all([api('/clientes'), api('/tipos-atividade'), osId ? api(`/os/${osId}`) : null])
-      .then(([listaClientes, listaTipos, os]) => {
-        setClientes(listaClientes);
+    Promise.all([api('/tipos-atividade'), osId ? api(`/os/${osId}`) : null])
+      .then(([listaTipos, os]) => {
         setTipos(listaTipos);
         if (os) {
           setClienteId(String(os.cliente.id));
@@ -64,11 +62,6 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
       })
       .catch((err) => setErro(err.message));
   }, [osId, data, hora, adicionarAtividade]);
-
-  useEffect(() => {
-    setEnderecos([]);
-    if (clienteId) api(`/clientes/${clienteId}`).then((c) => setEnderecos(c.enderecos)).catch((err) => setErro(err.message));
-  }, [clienteId]);
 
   // RF 3.6 / RF 3.7: observações do endereço, mais recente primeiro (a API já ordena)
   useEffect(() => {
@@ -99,10 +92,11 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   async function salvar(e) {
     e.preventDefault();
     setErro('');
+    if (!clienteId) { setErro('Selecione o cliente.'); return; }
     setEnviando(true);
     const body = {
       cliente_id: clienteId,
-      endereco_id: enderecoId || null,
+      endereco_id: enderecoId,
       observacao,
       atividades: linhas.map(({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim }) => ({ id, tipo_atividade_id, data: d, hora_inicio, hora_fim })),
     };
@@ -130,25 +124,9 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
       {!tipos && !erro && <p className="carregando">Carregando…</p>}
       {tipos && (
         <form id="form-os" className="campos" onSubmit={salvar} onChange={() => setAlterado(true)}>
-          <label>
-            Cliente
-            {/* RN 57: OS gerada por orçamento não troca de cliente */}
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} disabled={!!orcamentoId} required>
-              <option value="" disabled>Selecione</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
-            </select>
-            {orcamentoId && <span className="dica">OS gerada pelo orçamento nº {orcamentoId}; o cliente não pode ser trocado.</span>}
-          </label>
-
-          <label>
-            <span>Endereço <span className="opcional">(opcional)</span></span>
-            <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId}>
-              <option value="">Sem endereço</option>
-              {enderecos.map((en) => (
-                <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
-              ))}
-            </select>
-          </label>
+          {/* RN 57: OS gerada por orçamento não troca de cliente */}
+          <SeletorClienteEndereco clienteId={clienteId} enderecoId={enderecoId} onCliente={setClienteId} onEndereco={setEnderecoId} bloqueado={!!orcamentoId} />
+          {orcamentoId && <span className="dica">OS gerada pelo orçamento nº {orcamentoId}; o cliente não pode ser trocado.</span>}
 
           {observacoesEndereco.length > 0 && (
             <details className="obs-endereco" open>
