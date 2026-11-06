@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
 import Modal, { Confirmar } from '../agenda/Modal';
-import { formatarDataHora } from '../formato';
+import { formatarDataHora, formatarTelefone } from '../formato';
 import {
   IconeDireita, IconeEditar, IconeInfo, IconeLixo, IconeMais, iniciais,
 } from '../icones';
@@ -73,7 +73,7 @@ export default function Endereco() {
               <span className="avatar">{iniciais(cliente.nome)}</span>
               <div>
                 {cliente.id ? <Link to={`/clientes/${cliente.id}`} style={{ fontWeight: 600, textDecoration: 'none' }}>{cliente.nome}</Link> : <strong>{cliente.nome}</strong>}
-                <span className="suave" style={{ fontSize: 13 }}>{cliente.telefone}</span>
+                <span className="suave" style={{ fontSize: 13 }}>{formatarTelefone(cliente.telefone)}</span>
               </div>
             </div>
           </div>

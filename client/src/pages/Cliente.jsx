@@ -5,6 +5,7 @@ import Modal, { Confirmar } from '../agenda/Modal';
 import {
   IconeCasa, IconeDireita, IconeEditar, IconeLixo, IconeMais, iniciais,
 } from '../icones';
+import { formatarTelefone } from '../formato';
 import FormCliente from './FormCliente';
 
 // Linhas do grid de 6 colunas: Logradouro largo + Número estreito, etc.
@@ -47,7 +48,7 @@ export default function Cliente() {
         <div>
           <h1>{cliente.nome}</h1>
           <div className="meta">
-            <span>{cliente.telefone}</span>
+            <span>{formatarTelefone(cliente.telefone)}</span>
             <span aria-hidden="true">·</span>
             <span>{total === 1 ? '1 endereço' : `${total} endereços`}</span>
           </div>

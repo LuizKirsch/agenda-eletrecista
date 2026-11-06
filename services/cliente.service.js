@@ -10,17 +10,33 @@ async function buscarCliente(id) {
   return cliente;
 }
 
+const soDigitos = (t) => String(t ?? '').replace(/\D/g, '');
+
+// RF 3.1: DDD (11 a 99) + 8 ou 9 dígitos; guarda só os dígitos e recusa telefone já cadastrado.
+async function validarTelefone(telefone, idAtual) {
+  const digitos = soDigitos(telefone);
+  if (!/^[1-9][1-9](\d{8}|\d{9})$/.test(digitos)) {
+    throw httpErro(400, 'Telefone inválido. Informe o DDD e o número com 8 ou 9 dígitos.');
+  }
+  // ponytail: varre todos (cobre telefones antigos com máscara); indexar se a base crescer muito
+  const todos = await Cliente.findAll({ attributes: ['id', 'telefone'] });
+  if (todos.some((c) => c.id !== Number(idAtual) && soDigitos(c.telefone) === digitos)) {
+    throw httpErro(409, 'Já existe um cliente com este telefone.');
+  }
+  return digitos;
+}
+
 function listar(busca) {
   const termo = `%${busca}%`;
   return Cliente.findAll({
     attributes: ['id', 'nome', 'telefone'],
-    where: busca ? { [Op.or]: [{ nome: { [Op.like]: termo } }, { telefone: { [Op.like]: termo } }] } : undefined,
+    where: busca ? { [Op.or]: [{ nome: { [Op.like]: termo } }, { telefone: { [Op.like]: `%${soDigitos(busca) || busca}%` } }] } : undefined,
     order: [['nome', 'ASC'], ['id', 'ASC']],
   });
 }
 
 async function criar(dados) {
-  const cliente = await Cliente.create(dados);
+  const cliente = await Cliente.create({ ...dados, telefone: await validarTelefone(dados.telefone) });
   return cliente.reload();
 }
 
@@ -40,7 +56,7 @@ async function adicionarEndereco(clienteId, dados) {
 
 async function atualizar(id, dados) {
   const cliente = await buscarCliente(id);
-  await cliente.update(dados);
+  await cliente.update({ ...dados, telefone: await validarTelefone(dados.telefone, cliente.id) });
   return cliente;
 }
 

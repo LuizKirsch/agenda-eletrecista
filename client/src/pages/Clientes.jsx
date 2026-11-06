@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../api';
 import { IconeBusca, IconeDireita, IconeMais, iniciais } from '../icones';
+import { formatarTelefone } from '../formato';
 import FormCliente from './FormCliente';
 
 export default function Clientes() {
@@ -60,7 +61,7 @@ export default function Clientes() {
               <span className="avatar">{iniciais(c.nome)}</span>
               <span className="corpo">
                 <strong>{c.nome}</strong>
-                <span className="suave">{c.telefone}</span>
+                <span className="suave">{formatarTelefone(c.telefone)}</span>
               </span>
               <IconeDireita />
             </Link>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { dataBr, nomeDia } from '../datas';
-import { formatarEndereco } from '../formato';
+import { formatarEndereco, formatarTelefone } from '../formato';
 import {
   IconeAgenda, IconeAlerta, IconeBalao, IconeCheck, IconeLixo, IconeLocal, IconeMais, iniciais,
 } from '../icones';
@@ -85,7 +85,7 @@ export default function DetalheAtividade({
           <span className="avatar">{iniciais(os.cliente.nome)}</span>
           <div>
             <strong>{os.cliente.nome}</strong>
-            <span className="suave" style={{ fontSize: 13 }}>{os.cliente.telefone}</span>
+            <span className="suave" style={{ fontSize: 13 }}>{formatarTelefone(os.cliente.telefone)}</span>
           </div>
         </div>
         {os.endereco && (
