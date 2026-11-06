@@ -66,10 +66,13 @@ export default function DetalheAtividade({
           >
             <IconeLixo />Excluir OS
           </button>
-          <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Editar OS</button>
-          <button type="button" className="primario" disabled={ocupado} onClick={() => executar(`/os/${os.id}/concluir`, { method: 'POST' })}>
-            Concluir OS
-          </button>
+          {/* RN 9: OS concluída ou cancelada é só leitura (sem editar, concluir ou adicionar atividade) */}
+          {statusOs === 'agendada' && (<>
+            <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Editar OS</button>
+            <button type="button" className="primario" disabled={ocupado} onClick={() => executar(`/os/${os.id}/concluir`, { method: 'POST' })}>
+              Concluir OS
+            </button>
+          </>)}
         </>
       }
     >
@@ -130,7 +133,9 @@ export default function DetalheAtividade({
             );
           })}
         </ul>
-        <button type="button" className="tracejado" disabled={ocupado} onClick={onAdicionarAtividade}><IconeMais />Adicionar atividade</button>
+        {statusOs === 'agendada' && (
+          <button type="button" className="tracejado" disabled={ocupado} onClick={onAdicionarAtividade}><IconeMais />Adicionar atividade</button>
+        )}
       </section>
 
       {erro && <p className="erro" role="alert">{erro}</p>}

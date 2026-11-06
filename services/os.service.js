@@ -136,6 +136,10 @@ function criar(dados) {
 function atualizar(id, dados) {
   return sequelize.transaction(async (transaction) => {
     const os = await buscarOs(id, transaction);
+    // RN 9 / RN 36: OS sem atividade agendada (concluída ou cancelada) é só leitura: não é editada nem recebe atividade
+    if (!os.atividades.some((a) => a.status === 'agendada')) {
+      throw httpErro(409, 'OS concluída ou cancelada não pode ser editada.');
+    }
     const existentes = new Map(os.atividades.map((a) => [String(a.id), a]));
     const comId = dados.atividades.filter((l) => l.id).map((l) => String(l.id));
     const idsMantidos = new Set(comId);
