@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import Modal from '../agenda/Modal';
+import SelectBusca from '../SelectBusca';
 import SeletorClienteEndereco from '../agenda/SeletorClienteEndereco';
 import { formatarReais } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
@@ -110,18 +111,17 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
               <div key={item.chave} className="card-atividade">
                 <div className="tipo">
                   <span className="numero">{n + 1}</span>
-                  <select
-                    aria-label={`Atividade (${n + 1}º item)`}
+                  <SelectBusca
+                    ariaLabel={`Atividade (${n + 1}º item)`}
                     value={item.tipo_atividade_id}
-                    onChange={(e) => alterarItem(item.chave, { tipo_atividade_id: e.target.value })}
+                    onChange={(v) => alterarItem(item.chave, { tipo_atividade_id: v })}
                     required
-                  >
-                    <option value="" disabled>Selecione a atividade</option>
-                    <option value={AVULSO}>Avulso (fora do catálogo)</option>
-                    {tipos.filter((t) => t.ativo || tiposDoOrcamento.has(String(t.id))).map((t) => (
-                      <option key={t.id} value={t.id}>{t.nome}{t.ativo ? '' : ' (inativo)'}</option>
-                    ))}
-                  </select>
+                    placeholder="Selecione a atividade"
+                    opcoes={[
+                      { valor: AVULSO, rotulo: 'Avulso (fora do catálogo)' },
+                      ...tipos.filter((t) => t.ativo || tiposDoOrcamento.has(String(t.id))).map((t) => ({ valor: t.id, rotulo: `${t.nome}${t.ativo ? '' : ' (inativo)'}`, desabilitada: !t.ativo })),
+                    ]}
+                  />
                   {itens.length > 1 && (
                     <button type="button" className="icone-botao discreto perigo" aria-label={`Remover ${n + 1}º item`} onClick={() => { setItens(itens.filter((x) => x.chave !== item.chave)); setAlterado(true); }}>
                       <IconeLixo />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
+import SelectBusca from '../SelectBusca';
 import { carregarEletricistas, oferecer } from '../eletricistas';
 import Modal, { Confirmar } from '../agenda/Modal';
 import {
@@ -211,10 +212,8 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
         </p>
         <label>
           Eletricista responsável
-          <select value={eletricistaId} onChange={(e) => setEletricistaId(e.target.value)} required>
-            <option value="" disabled>Selecione</option>
-            {oferecer(eletricistas).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-          </select>
+          <SelectBusca value={eletricistaId} onChange={setEletricistaId} required
+            opcoes={oferecer(eletricistas).map((u) => ({ valor: u.id, rotulo: u.nome }))} />
         </label>
         <label className="c3 meia">Começa em<input type="date" value={data} onChange={(e) => mudarInicioGeral(e.target.value, inicio)} required /></label>
         <label className="c3 meia">Início<input type="time" value={inicio} onChange={(e) => mudarInicioGeral(data, e.target.value)} required /></label>
@@ -233,10 +232,8 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
                 </div>
                 <label className="inteira">
                   Eletricista
-                  <select value={horarios[i].eletricista_id || eletricistaId} onChange={(e) => alterar(i, { eletricista_id: e.target.value })} required>
-                    <option value="" disabled>Selecione</option>
-                    {oferecer(eletricistas).map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                  </select>
+                  <SelectBusca value={horarios[i].eletricista_id || eletricistaId} onChange={(v) => alterar(i, { eletricista_id: v })} required
+                    opcoes={oferecer(eletricistas).map((u) => ({ valor: u.id, rotulo: u.nome }))} />
                 </label>
                 <label className="data">Data<input type="date" value={horarios[i].data} onChange={(e) => alterar(i, { data: e.target.value })} required /></label>
                 <label>Início<input type="time" value={horarios[i].hora_inicio} onChange={(e) => alterar(i, { hora_inicio: e.target.value })} required /></label>

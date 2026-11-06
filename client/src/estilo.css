@@ -65,6 +65,26 @@ input, select, textarea {
 input::placeholder, textarea::placeholder { color: #8a919c; }
 input:focus, select:focus, textarea:focus { outline: none; box-shadow: var(--afundado), 0 0 0 2px var(--primaria); }
 input:disabled, select:disabled { color: var(--texto-suave); opacity: .7; }
+
+/* select com busca (SelectBusca.jsx) */
+.select-busca { position: relative; min-width: 0; flex: 1; }
+.select-busca input[role="combobox"] { padding-right: 32px; text-overflow: ellipsis; }
+.select-busca-seta {
+  position: absolute; right: 13px; top: calc(var(--altura) / 2 - 5px);
+  width: 6px; height: 6px; pointer-events: none;
+  border: solid var(--texto-suave); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+}
+.select-busca-lista {
+  position: absolute; z-index: 60; left: 0; right: 0; top: calc(100% + 4px);
+  margin: 0; padding: 4px; list-style: none;
+  max-height: 240px; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--fundo); border-radius: 8px; box-shadow: var(--relevo-p), var(--sombra-flutuante);
+}
+.select-busca-lista li { padding: 9px 10px; border-radius: 6px; font-size: 14px; font-weight: 400; color: var(--texto); cursor: pointer; }
+.select-busca-lista li.ativo { background: var(--primaria-clara); color: var(--primaria-texto); }
+.select-busca-lista li[aria-selected="true"] { font-weight: 600; }
+.select-busca-lista li.desabilitada { color: var(--texto-suave); opacity: .6; cursor: not-allowed; }
+.select-busca-lista li.vazio { color: var(--texto-suave); cursor: default; }
 textarea { padding: 10px 12px; min-height: 96px; resize: vertical; line-height: 1.5; }
 .dica { font-size: 12px; font-weight: 400; color: var(--texto-suave); }
 

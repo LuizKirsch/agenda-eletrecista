@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import SelectBusca from '../SelectBusca';
 import { formatarEndereco, formatarTelefone } from '../formato';
 
 // RF 6.2 / RF 4.17: busca cliente por parte do nome ou telefone (GET /clientes?busca=) e cadastra
@@ -104,12 +105,12 @@ export default function SeletorClienteEndereco({ clienteId, enderecoId, onClient
         <div className="campos">
           <label>
             <span>Endereço{enderecoOpcional && <span className="opcional"> (opcional)</span>}</span>
-            <select value={enderecoId} onChange={(e) => onEndereco(e.target.value)} disabled={!cliente} required={!enderecoOpcional}>
-              <option value="" disabled={!enderecoOpcional}>{cliente && !cliente.enderecos.length ? 'Cliente sem endereço cadastrado' : 'Selecione'}</option>
-              {cliente?.enderecos.map((en) => (
-                <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
-              ))}
-            </select>
+            <SelectBusca value={enderecoId} onChange={onEndereco} disabled={!cliente} required={!enderecoOpcional}
+              placeholder={cliente && !cliente.enderecos.length ? 'Cliente sem endereço cadastrado' : 'Selecione'}
+              opcoes={[
+                ...(enderecoOpcional ? [{ valor: '', rotulo: 'Sem endereço' }] : []),
+                ...(cliente?.enderecos ?? []).map((en) => ({ valor: en.id, rotulo: `${en.identificacao ? `${en.identificacao} · ` : ''}${formatarEndereco(en)}` })),
+              ]} />
           </label>
           {!novoEnd && cliente && <button type="button" className="tracejado" onClick={() => setNovoEnd({})}>Cadastrar novo endereço</button>}
           {novoEnd && (
