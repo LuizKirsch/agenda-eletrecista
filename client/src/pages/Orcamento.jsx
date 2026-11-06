@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../api';
 import SelectBusca from '../SelectBusca';
 import { carregarEletricistas, oferecer } from '../eletricistas';
 import Modal, { Confirmar } from '../agenda/Modal';
 import {
-  hoje, paraHora, paraMin, somarDias,
+  hoje, paraHora, paraMin,
 } from '../datas';
 import {
   formatarDataHora, formatarDuracao, formatarEndereco, formatarReais, formatarTelefone,
@@ -240,22 +240,6 @@ function Versoes({ orcamentoId, atual }) {
   );
 }
 
-// RN 51: encadeia a partir de data/início; o item que não cabe mais no dia vai para o dia seguinte, no mesmo início
-function sugerirHorarios(itens, data, inicio) {
-  const base = paraMin(inicio);
-  let dia = data;
-  let min = base;
-  return itens.map((item) => {
-    if (min !== base && min + item.duracao_min > 1439) {
-      dia = somarDias(dia, 1);
-      min = base;
-    }
-    const horario = { data: dia, hora_inicio: paraHora(min) };
-    min += item.duracao_min;
-    return horario;
-  });
-}
-
 // RN 52: cada atividade começa e termina no próprio dia
 const fimDe = (horario, item) => (horario.hora_inicio ? paraMin(horario.hora_inicio) + item.duracao_min : null);
 
@@ -265,24 +249,76 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
   const [eletricistaId, setEletricistaId] = useState('');
   const [data, setData] = useState(hoje());
   const [inicio, setInicio] = useState('08:00');
-  const [horarios, setHorarios] = useState(() => sugerirHorarios(itens, hoje(), '08:00'));
+  const [horarios, setHorarios] = useState(() => itens.map(() => ({ data: '', hora_inicio: '' })));
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [calculando, setCalculando] = useState(false);
+  const [gatilho, setGatilho] = useState(0);
+  const pedido = useRef(null); // menor índice a recalcular enquanto o debounce espera
+  const atual = useRef({});
+  const versao = useRef(0);
+  atual.current = { data, inicio, eletricistaId, horarios };
+
+  // RF 4.19 / RN 67: do item `de` em diante é recalculado pelo servidor; os anteriores ficam como estão
+  function recalcular(de) {
+    if (de >= itens.length) return;
+    pedido.current = Math.min(pedido.current ?? de, de);
+    setGatilho((g) => g + 1);
+  }
 
   function mudarInicioGeral(novaData, novoInicio) {
     setData(novaData);
     setInicio(novoInicio);
-    if (novaData && novoInicio) setHorarios(sugerirHorarios(itens, novaData, novoInicio));
+    if (novaData && novoInicio) recalcular(0);
   }
+
+  function mudarEletricistaGeral(v) {
+    setEletricistaId(v);
+    recalcular(0);
+  }
+
+  useEffect(() => {
+    if (!gatilho) return undefined;
+    const t = setTimeout(async () => {
+      const de = pedido.current;
+      pedido.current = null;
+      const a = atual.current;
+      if (!a.eletricistaId || !a.data || !a.inicio || a.horarios.slice(0, de).some((h) => !h.data || !h.hora_inicio)) return;
+      const minha = ++versao.current;
+      setCalculando(true);
+      try {
+        const r = await api(`/orcamentos/${orcamento.id}/recomendar`, {
+          method: 'POST',
+          body: {
+            data: a.data,
+            hora_inicio: a.inicio,
+            eletricista_id: a.eletricistaId,
+            a_partir_de: de,
+            atividades: a.horarios.map((h) => ({ eletricista_id: h.eletricista_id || a.eletricistaId, data: h.data, hora_inicio: h.hora_inicio })),
+          },
+        });
+        if (minha !== versao.current) return;
+        setHorarios((hs) => hs.map((h, n) => (n < de ? h : { ...h, data: r[n]?.data ?? '', hora_inicio: r[n]?.hora_inicio ?? '', sem: !r[n] })));
+        setErro('');
+      } catch (err) {
+        if (minha === versao.current) setErro(err.message);
+      } finally {
+        if (minha === versao.current) setCalculando(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [gatilho, orcamento.id]);
 
   useEffect(() => {
     carregarEletricistas().then(setEletricistas).catch((err) => setErro(err.message));
   }, []);
 
   const alterar = (i, campos) => setHorarios((atuais) => atuais.map((h, n) => (n === i ? { ...h, ...campos } : h)));
+  const trocarHorario = (i, campos) => { alterar(i, { ...campos, sem: false }); recalcular(i + 1); };
+  const trocarEletricista = (i, v) => { alterar(i, { eletricista_id: v }); recalcular(i); };
   const fins = itens.map((item, i) => fimDe(horarios[i], item));
   const valido = eletricistaId && horarios.every((h, i) => h.data && fins[i] !== null && fins[i] <= 1439);
-  const dias = new Set(horarios.map((h) => h.data)).size;
+  const dias = new Set(horarios.map((h) => h.data).filter(Boolean)).size;
 
   async function aceitar(e) {
     e.preventDefault();
@@ -317,7 +353,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
         </p>
         <label>
           Eletricista responsável
-          <SelectBusca value={eletricistaId} onChange={setEletricistaId} required
+          <SelectBusca value={eletricistaId} onChange={mudarEletricistaGeral} required
             opcoes={oferecer(eletricistas).map((u) => ({ valor: u.id, rotulo: u.nome }))} />
         </label>
         <label className="c3 meia">Começa em<input type="date" value={data} onChange={(e) => mudarInicioGeral(e.target.value, inicio)} required /></label>
@@ -325,7 +361,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
 
         <div className="grupo-atividades">
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>
-            Agenda da OS · {dias === 1 ? '1 dia' : `${dias} dias`}
+            Agenda da OS · {dias === 1 ? '1 dia' : `${dias} dias`}{calculando && ' · Calculando…'}
           </span>
           {itens.map((item, i) => {
             const cabe = fins[i] !== null && fins[i] <= 1439;
@@ -337,12 +373,13 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
                 </div>
                 <label className="inteira">
                   Eletricista
-                  <SelectBusca value={horarios[i].eletricista_id || eletricistaId} onChange={(v) => alterar(i, { eletricista_id: v })} required
+                  <SelectBusca value={horarios[i].eletricista_id || eletricistaId} onChange={(v) => trocarEletricista(i, v)} required
                     opcoes={oferecer(eletricistas).map((u) => ({ valor: u.id, rotulo: u.nome }))} />
                 </label>
-                <label className="data">Data<input type="date" value={horarios[i].data} onChange={(e) => alterar(i, { data: e.target.value })} required /></label>
-                <label>Início<input type="time" value={horarios[i].hora_inicio} onChange={(e) => alterar(i, { hora_inicio: e.target.value })} required /></label>
+                <label className="data">Data<input type="date" value={horarios[i].data} onChange={(e) => trocarHorario(i, { data: e.target.value })} required /></label>
+                <label>Início<input type="time" value={horarios[i].hora_inicio} onChange={(e) => trocarHorario(i, { hora_inicio: e.target.value })} required /></label>
                 <label>Fim<input type="time" value={cabe ? paraHora(fins[i]) : ''} disabled /></label>
+                {horarios[i].sem && <p className="erro inteira" role="status">Sem horário livre em 60 dias; informe à mão.</p>}
                 {!cabe && horarios[i].hora_inicio && <p className="erro inteira" role="alert">Não cabe no dia: termina depois de 23h59. Escolha um início mais cedo.</p>}
               </div>
             );
