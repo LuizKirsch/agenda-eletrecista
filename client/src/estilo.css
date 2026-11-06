@@ -404,6 +404,11 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .cor.encerrada { background: #c3cad4; }
 .legenda svg { color: var(--perigo); }
 
+.chips-eletricista { display: flex; gap: 8px; margin: 0 0 12px; overflow-x: auto; scrollbar-width: none; }
+.chips-eletricista::-webkit-scrollbar { display: none; }
+.chip { flex: none; min-height: 36px; border-radius: 999px; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--primaria-clara); color: var(--primaria-texto); box-shadow: inset 0 0 0 1.5px var(--primaria); font-weight: 600; }
+
 .largo > .erro, .largo > .aviso { margin: 0 0 12px; }
 
 .grade-rolagem {

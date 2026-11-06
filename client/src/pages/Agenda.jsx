@@ -126,11 +126,19 @@ export default function Agenda() {
 
   const semanaAtual = segundaDe(hoje());
 
-  const seletorEletricista = (
-    <select aria-label="Filtrar por eletricista" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-      <option value="">Todos os eletricistas</option>
-      {eletricistas.map((u) => <option key={u.id} value={u.id}>{u.nome}{u.ativo ? '' : ' (inativo)'}</option>)}
-    </select>
+  // RF 1.13: inativo só aparece com atividade na semana carregada ou se for o filtro atual
+  const comAtividade = new Set(atividades.map((x) => String(x.eletricista?.id)));
+  const chips = (
+    <div className="chips-eletricista" role="group" aria-label="Filtrar por eletricista">
+      <button type="button" className="chip" aria-pressed={filtro === ''} onClick={() => setFiltro('')}>Todos</button>
+      {eletricistas
+        .filter((u) => u.ativo || String(u.id) === filtro || comAtividade.has(String(u.id)))
+        .map((u) => (
+          <button key={u.id} type="button" className="chip" aria-pressed={filtro === String(u.id)} onClick={() => setFiltro(String(u.id))}>
+            {u.nome}{u.ativo ? '' : ' (inativo)'}
+          </button>
+        ))}
+    </div>
   );
 
   const anterior = () => setSegunda(somarDias(segunda, -7));
@@ -150,13 +158,9 @@ export default function Agenda() {
           )}
         </div>
         {celular ? (
-          <>
-            <button type="button" onClick={() => setSegunda(semanaAtual)}>Hoje</button>
-            {seletorEletricista}
-          </>
+          <button type="button" onClick={() => setSegunda(semanaAtual)}>Hoje</button>
         ) : (
           <div className="acoes-cab">
-            {seletorEletricista}
             <div className="legenda">
               <span><i className="cor agendada" /> Agendada</span>
               <span><i className="cor encerrada" /> Concluída / cancelada</span>
@@ -169,6 +173,8 @@ export default function Agenda() {
 
       {erro && <p className="erro" role="alert">{erro}</p>}
       {aviso && <p className="aviso" role="status">{aviso}</p>}
+
+      {chips}
 
       {celular ? (
         <>
