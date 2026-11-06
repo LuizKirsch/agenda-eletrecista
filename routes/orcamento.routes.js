@@ -8,6 +8,7 @@ router.get('/:id/versoes', orcamentos.listarVersoes);
 router.get('/:id/versoes/:numero', orcamentos.detalharVersao);
 router.put('/:id', orcamentos.atualizar);
 router.delete('/:id', orcamentos.excluir);
+router.post('/:id/recomendar', orcamentos.recomendar);
 router.post('/:id/aceitar', orcamentos.aceitar);
 router.post('/:id/recusar', orcamentos.recusar);
 

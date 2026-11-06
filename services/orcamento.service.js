@@ -2,8 +2,10 @@ const {
   sequelize, Orcamento, OrcamentoItem, OrcamentoVersao, Usuario, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade,
 } = require('../models');
 const { httpErro } = require('../middlewares/erros');
-const { paraMin, paraHora } = require('./horario');
-const { avisoConflito } = require('./agenda.service');
+const { paraMin, paraHora, diaNum, dataDeNum } = require('./horario');
+const { Op } = require('sequelize');
+const { avisoConflito, hhmm } = require('./agenda.service');
+const { recomendar } = require('./recomendacao');
 const { validarClienteEndereco, validarEletricistas } = require('./os.service');
 const { reais } = require('./tipoAtividade.service');
 
@@ -192,6 +194,32 @@ function aceitar(id, horarios, eletricistaId) {
   });
 }
 
+// RF 4.19 / RN 67: uma consulta só (índice eletricista+data) com a agenda dos eletricistas envolvidos; o resto é em memória.
+// fixas = itens 0..N-1 já definidos ({ data, inicioMin }); a recomendação recomeça do fim da última.
+async function recomendarHorarios(id, { data, inicioMin, eletricistaId, atividades, fixas }) {
+  const orcamento = await buscar(id);
+  if (fixas.length > orcamento.itens.length) throw httpErro(400, 'Ponto de recálculo inválido.');
+  const eletricistas = orcamento.itens.map((_, i) => atividades[i]?.eletricista_id ?? eletricistaId);
+  const datas = [data, ...fixas.map((f) => f.data)].sort();
+  const agenda = await AtividadeOs.findAll({
+    where: {
+      eletricista_id: [...new Set(eletricistas)],
+      data: { [Op.between]: [datas[0], dataDeNum(diaNum(datas.at(-1)) + 61)] },
+      status: { [Op.ne]: 'cancelada' },
+    },
+    attributes: ['eletricista_id', 'data', 'hora_inicio', 'hora_fim'],
+  });
+  const porDia = new Map();
+  for (const a of agenda) {
+    const chave = `${a.eletricista_id}|${a.data}`;
+    if (!porDia.has(chave)) porDia.set(chave, []);
+    porDia.get(chave).push({ ini: paraMin(hhmm(a.hora_inicio)), fim: paraMin(hhmm(a.hora_fim)) });
+  }
+  return recomendar({
+    itens: orcamento.itens, data, inicioMin, eletricistas, fixas, ocupadosPor: (eletr, dia) => porDia.get(`${eletr}|${dia}`) || [],
+  });
+}
+
 module.exports = {
-  listar, detalhar, criar, atualizar, excluir, recusar, aceitar, listarVersoes, detalharVersao,
+  recomendarHorarios, listar, detalhar, criar, atualizar, excluir, recusar, aceitar, listarVersoes, detalharVersao,
 };

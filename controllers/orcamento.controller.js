@@ -1,6 +1,6 @@
 const orcamentoService = require('../services/orcamento.service');
 const { httpErro, lerCampos } = require('../middlewares/erros');
-const { ehData, ehHora } = require('../services/horario');
+const { ehData, ehHora, paraMin } = require('../services/horario');
 const { lerId } = require('./os.controller');
 const { vazio, lerValor } = require('./tipoAtividade.controller');
 
@@ -77,6 +77,28 @@ async function aceitar(req, res) {
   res.json(await orcamentoService.aceitar(req.params.id, horarios, eletricistaId));
 }
 
+// body: { data, hora_inicio, eletricista_id, atividades?: [{ eletricista_id?, data?, hora_inicio? }], a_partir_de?: n }
+// Os n primeiros itens ficam como informados em `atividades` (precisam de data e início); do n-ésimo em diante é recalculado.
+async function recomendar(req, res) {
+  const { data, hora_inicio: horaInicio, a_partir_de: aPartirDe = 0 } = req.body ?? {};
+  const eletricistaId = lerId(req.body?.eletricista_id);
+  if (!ehData(data)) throw httpErro(400, 'Preencha o campo Começa em.');
+  if (!ehHora(horaInicio)) throw httpErro(400, 'Preencha o campo Início.');
+  if (!eletricistaId) throw httpErro(400, 'Selecione o eletricista responsável.');
+  const lista = req.body.atividades ?? [];
+  if (!Array.isArray(lista)) throw httpErro(400, 'Atividades inválidas.');
+  if (!Number.isInteger(aPartirDe) || aPartirDe < 0 || aPartirDe > lista.length) throw httpErro(400, 'Ponto de recálculo inválido.');
+  const atividades = lista.map((h) => ({ eletricista_id: lerId(h?.eletricista_id) ?? eletricistaId, data: h?.data, hora_inicio: h?.hora_inicio }));
+  const fixas = atividades.slice(0, aPartirDe).map((h, i) => {
+    if (!ehData(h.data)) throw httpErro(400, `Preencha o campo Data (${i + 1}º item).`);
+    if (!ehHora(h.hora_inicio)) throw httpErro(400, `Preencha o campo Início (${i + 1}º item).`);
+    return { data: h.data, inicioMin: paraMin(h.hora_inicio) };
+  });
+  res.json(await orcamentoService.recomendarHorarios(req.params.id, {
+    data, inicioMin: paraMin(horaInicio), eletricistaId, atividades, fixas,
+  }));
+}
+
 async function listarVersoes(req, res) {
   res.json(await orcamentoService.listarVersoes(req.params.id));
 }
@@ -86,5 +108,5 @@ async function detalharVersao(req, res) {
 }
 
 module.exports = {
-  listar, detalhar, criar, atualizar, excluir, recusar, aceitar, listarVersoes, detalharVersao,
+  listar, detalhar, criar, atualizar, excluir, recusar, aceitar, recomendar, listarVersoes, detalharVersao,
 };
