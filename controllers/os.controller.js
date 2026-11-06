@@ -21,6 +21,7 @@ function lerOs(body) {
   const clienteId = lerId(body?.cliente_id);
   if (!clienteId) throw httpErro(400, 'Selecione o cliente.');
   const enderecoId = lerId(body.endereco_id);
+  if (!enderecoId) throw httpErro(400, 'Selecione o endereço.');
   const observacao = typeof body.observacao === 'string' && body.observacao.trim() ? body.observacao.trim() : null;
   if (!Array.isArray(body.atividades) || !body.atividades.length) throw httpErro(400, 'Adicione ao menos uma atividade.');
 
