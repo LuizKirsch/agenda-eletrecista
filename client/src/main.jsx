@@ -7,6 +7,7 @@ import Clientes from './pages/Clientes';
 import Endereco from './pages/Endereco';
 import Layout from './pages/Layout';
 import Login from './pages/Login';
+import OsImprimir from './pages/OsImprimir';
 import Orcamento from './pages/Orcamento';
 import Orcamentos from './pages/Orcamentos';
 import TiposAtividade from './pages/TiposAtividade';
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/enderecos/:id" element={<Endereco />} />
           <Route path="/orcamentos" element={<Orcamentos />} />
           <Route path="/orcamentos/:id" element={<Orcamento />} />
+          <Route path="/os/:id/imprimir" element={<OsImprimir />} />
         </Route>
       </Routes>
     </AuthProvider>

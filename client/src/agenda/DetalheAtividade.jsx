@@ -3,14 +3,14 @@ import { api } from '../api';
 import { dataBr, nomeDia } from '../datas';
 import { formatarEndereco, formatarTelefone } from '../formato';
 import {
-  IconeAgenda, IconeAlerta, IconeBalao, IconeCheck, IconeLixo, IconeLocal, IconeMais, iniciais,
+  IconeAgenda, IconeAlerta, IconeBalao, IconeCheck, IconeImprimir, IconeLixo, IconeLocal, IconeMais, iniciais,
 } from '../icones';
 import Modal from './Modal';
 
 export const NOME_STATUS = { agendada: 'Agendada', concluida: 'Concluída', cancelada: 'Cancelada' };
 
 // Status da OS para o cabeçalho: agendada se ainda houver alguma atividade agendada
-const statusDaOs = (atividades) => (atividades.some((x) => x.status === 'agendada')
+export const statusDaOs = (atividades) => (atividades.some((x) => x.status === 'agendada')
   ? 'agendada'
   : atividades.every((x) => x.status === 'cancelada') ? 'cancelada' : 'concluida');
 
@@ -66,6 +66,8 @@ export default function DetalheAtividade({
           >
             <IconeLixo />Excluir OS
           </button>
+          {/* RF 6.23: exportar vale em qualquer status; nova aba para não perder a agenda */}
+          <button type="button" onClick={() => window.open(`/os/${os.id}/imprimir`, '_blank')}><IconeImprimir />Exportar PDF</button>
           {/* RN 9: OS concluída ou cancelada é só leitura (sem editar, concluir ou adicionar atividade) */}
           {statusOs === 'agendada' && (<>
             <button type="button" disabled={ocupado} onClick={() => onEditarOs(selecionada)}>Editar OS</button>
