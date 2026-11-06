@@ -51,6 +51,7 @@ const OrdemServico = sequelize.define('OrdemServico', {
   id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
   cliente_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   endereco_id: { type: DataTypes.BIGINT.UNSIGNED },
+  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED },
   observacao: { type: DataTypes.TEXT },
 }, { tableName: 'ordem_servico', timestamps: false, underscored: true });
 
@@ -59,6 +60,7 @@ const AtividadeOs = sequelize.define('AtividadeOs', {
   id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
   ordem_servico_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   tipo_atividade_id: { type: DataTypes.BIGINT.UNSIGNED },
+  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED },
   descricao: { type: DataTypes.STRING(100) },
   sequencia: { type: DataTypes.INTEGER, allowNull: false },
   data: { type: DataTypes.DATEONLY, allowNull: false },
@@ -95,6 +97,8 @@ EnderecoObservacao.belongsTo(Endereco, { foreignKey: 'endereco_id', as: 'enderec
 
 OrdemServico.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 OrdemServico.belongsTo(Endereco, { foreignKey: 'endereco_id', as: 'endereco' });
+OrdemServico.belongsTo(Usuario, { foreignKey: 'eletricista_id', as: 'eletricista' });
+AtividadeOs.belongsTo(Usuario, { foreignKey: 'eletricista_id', as: 'eletricista' });
 OrdemServico.hasMany(AtividadeOs, { foreignKey: 'ordem_servico_id', as: 'atividades' });
 AtividadeOs.belongsTo(OrdemServico, { foreignKey: 'ordem_servico_id', as: 'os' });
 AtividadeOs.belongsTo(TipoAtividade, { foreignKey: 'tipo_atividade_id', as: 'tipo' });

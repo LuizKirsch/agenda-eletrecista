@@ -1,5 +1,5 @@
 const {
-  sequelize, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade, Orcamento,
+  sequelize, OrdemServico, AtividadeOs, Cliente, Endereco, TipoAtividade, Orcamento, Usuario,
 } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 const { paraMin, paraHora } = require('./horario');
@@ -55,7 +55,26 @@ async function validarTipos(linhas, existentes, transaction) {
   });
 }
 
+// RN 63: só eletricista ativo em OS/atividade nova ou alterada; o que já estava gravado pode continuar, mesmo inativo.
+async function validarEletricistas(dados, os, existentes, transaction) {
+  const ids = [...new Set([dados.eletricista_id, ...dados.atividades.map((l) => l.eletricista_id)].map(String))];
+  const usuarios = await Usuario.findAll({ where: { id: ids, perfil: 'eletricista' }, transaction });
+  const porId = new Map(usuarios.map((u) => [String(u.id), u]));
+  const confere = (id, jaGravado, rotulo) => {
+    const u = porId.get(String(id));
+    if (!u) throw httpErro(400, `Eletricista não encontrado${rotulo}.`);
+    if (!u.ativo && String(jaGravado) !== String(id)) throw httpErro(400, `O eletricista "${u.nome}" está inativo. Escolha um eletricista ativo${rotulo}.`);
+  };
+  confere(dados.eletricista_id, os?.eletricista_id, '');
+  dados.atividades.forEach((l, i) => {
+    const existente = l.id && existentes.get(String(l.id));
+    if (existente && existente.status !== 'agendada') return;
+    confere(l.eletricista_id, existente?.eletricista_id, ` (${i + 1}ª atividade)`);
+  });
+}
+
 const camposAtividade = (linha, i) => ({
+  eletricista_id: linha.eletricista_id,
   tipo_atividade_id: linha.tipo_atividade_id,
   data: linha.data,
   hora_inicio: linha.hora_inicio,
@@ -68,7 +87,8 @@ async function detalhar(id) {
     include: [
       { model: Cliente, as: 'cliente' },
       { model: Endereco, as: 'endereco' },
-      { model: AtividadeOs, as: 'atividades', include: { model: TipoAtividade, as: 'tipo' } },
+      { model: Usuario, as: 'eletricista' },
+      { model: AtividadeOs, as: 'atividades', include: [{ model: TipoAtividade, as: 'tipo' }, { model: Usuario, as: 'eletricista' }] },
     ],
     order: [[{ model: AtividadeOs, as: 'atividades' }, 'sequencia', 'ASC']],
   });
@@ -81,6 +101,7 @@ async function detalhar(id) {
     observacao: os.observacao,
     cliente: { id: os.cliente.id, nome: os.cliente.nome, telefone: os.cliente.telefone },
     endereco: os.endereco,
+    eletricista: os.eletricista && { id: os.eletricista.id, nome: os.eletricista.nome, ativo: os.eletricista.ativo },
     atividades: os.atividades.map((a) => ({
       id: a.id,
       sequencia: a.sequencia,
@@ -89,6 +110,7 @@ async function detalhar(id) {
       hora_inicio: hhmm(a.hora_inicio),
       hora_fim: hhmm(a.hora_fim),
       status: a.status,
+      eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome, ativo: a.eletricista.ativo },
       conflito: conflitos.has(a.id),
     })),
   };
@@ -98,8 +120,9 @@ function criar(dados) {
   return sequelize.transaction(async (transaction) => {
     await validarClienteEndereco(dados, transaction);
     await validarTipos(dados.atividades, new Map(), transaction);
+    await validarEletricistas(dados, null, new Map(), transaction);
     const os = await OrdemServico.create({
-      cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, observacao: dados.observacao,
+      cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, eletricista_id: dados.eletricista_id, observacao: dados.observacao,
     }, { transaction });
     const atividades = await AtividadeOs.bulkCreate(
       dados.atividades.map((l, i) => ({ ...camposAtividade(l, i), ordem_servico_id: os.id, status: 'agendada' })),
@@ -129,7 +152,8 @@ function atualizar(id, dados) {
     }
     await validarClienteEndereco(dados, transaction);
     await validarTipos(dados.atividades, existentes, transaction);
-    await os.update({ cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, observacao: dados.observacao }, { transaction });
+    await validarEletricistas(dados, os, existentes, transaction);
+    await os.update({ cliente_id: dados.cliente_id, endereco_id: dados.endereco_id, eletricista_id: dados.eletricista_id, observacao: dados.observacao }, { transaction });
 
     const removidas = os.atividades.filter((a) => !idsMantidos.has(String(a.id))).map((a) => a.id);
     if (removidas.length) await AtividadeOs.destroy({ where: { id: removidas }, transaction });
@@ -237,5 +261,5 @@ function excluirAtividade(id) {
 }
 
 module.exports = {
-  validarClienteEndereco, detalhar, criar, atualizar, excluir, deslocar, concluir, remarcarAtividade, alterarStatus, excluirAtividade,
+  validarClienteEndereco, validarEletricistas, detalhar, criar, atualizar, excluir, deslocar, concluir, remarcarAtividade, alterarStatus, excluirAtividade,
 };
