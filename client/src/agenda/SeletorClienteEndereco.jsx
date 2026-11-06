@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { formatarEndereco } from '../formato';
+import { formatarEndereco, formatarTelefone } from '../formato';
 
 // RF 6.2 / RF 4.17: busca cliente por parte do nome ou telefone (GET /clientes?busca=) e cadastra
 // cliente e endereço sem sair do formulário. Fica dentro de um <form>, então não usa <form> aninhado.
@@ -68,7 +68,7 @@ export default function SeletorClienteEndereco({ clienteId, enderecoId, onClient
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Cliente</span>
         {clienteId ? (
           <p style={{ margin: '6px 0 0' }}>
-            <strong>{cliente ? `${cliente.nome} · ${cliente.telefone}` : 'Carregando…'}</strong>{' '}
+            <strong>{cliente ? `${cliente.nome} · ${formatarTelefone(cliente.telefone)}` : 'Carregando…'}</strong>{' '}
             {!bloqueado && <button type="button" onClick={() => { onCliente(''); onEndereco(''); }}>Trocar</button>}
           </p>
         ) : (
@@ -80,7 +80,7 @@ export default function SeletorClienteEndereco({ clienteId, enderecoId, onClient
             {achados && (
               <ul style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'grid', gap: 4 }}>
                 {achados.map((c) => (
-                  <li key={c.id}><button type="button" style={{ width: '100%', textAlign: 'left' }} onClick={() => escolher(c.id)}>{c.nome} · {c.telefone}</button></li>
+                  <li key={c.id}><button type="button" style={{ width: '100%', textAlign: 'left' }} onClick={() => escolher(c.id)}>{c.nome} · {formatarTelefone(c.telefone)}</button></li>
                 ))}
                 {!achados.length && <li className="suave">Nenhum cliente encontrado.</li>}
               </ul>
@@ -89,7 +89,7 @@ export default function SeletorClienteEndereco({ clienteId, enderecoId, onClient
             {novo && (
               <div className="campos" style={{ marginTop: 8 }}>
                 <label className="c4">Nome<input value={novo.nome} maxLength={120} onKeyDown={aoEnter(cadastrarCliente)} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} /></label>
-                <label className="c2">Telefone<input type="tel" value={novo.telefone} maxLength={20} onKeyDown={aoEnter(cadastrarCliente)} onChange={(e) => setNovo({ ...novo, telefone: e.target.value })} /></label>
+                <label className="c2">Telefone<input type="tel" value={novo.telefone} maxLength={20} onKeyDown={aoEnter(cadastrarCliente)} onChange={(e) => setNovo({ ...novo, telefone: formatarTelefone(e.target.value) })} /></label>
                 <div>
                   <button type="button" onClick={() => setNovo(null)}>Cancelar</button>{' '}
                   <button type="button" className="primario" onClick={cadastrarCliente}>Cadastrar cliente</button>
