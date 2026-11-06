@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../api';
 import Modal from '../agenda/Modal';
+import { formatarTelefone } from '../formato';
 
 // sem `cliente`: cadastra e abre a ficha; com `cliente`: edita e devolve em onSalvo (RF 3.9)
 export default function FormCliente({ cliente, onFechar, onSalvo }) {
@@ -40,7 +41,7 @@ export default function FormCliente({ cliente, onFechar, onSalvo }) {
     >
       <form id="form-cliente" className="campos" onSubmit={salvar}>
         <label className="c4">Nome<input name="nome" maxLength={120} defaultValue={cliente?.nome} required autoFocus /></label>
-        <label className="c2">Telefone<input name="telefone" type="tel" maxLength={20} defaultValue={cliente?.telefone} required /></label>
+        <label className="c2">Telefone<input name="telefone" type="tel" inputMode="tel" maxLength={15} placeholder="(11) 91234-5678" defaultValue={formatarTelefone(cliente?.telefone)} onChange={(e) => { e.target.value = formatarTelefone(e.target.value); }} required /></label>
         {erro && <p className="erro" role="alert">{erro}</p>}
       </form>
     </Modal>

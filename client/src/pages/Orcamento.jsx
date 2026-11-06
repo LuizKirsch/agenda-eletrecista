@@ -6,7 +6,7 @@ import {
   hoje, paraHora, paraMin, somarDias,
 } from '../datas';
 import {
-  formatarDataHora, formatarDuracao, formatarEndereco, formatarReais,
+  formatarDataHora, formatarDuracao, formatarEndereco, formatarReais, formatarTelefone,
 } from '../formato';
 import {
   IconeCheck, IconeDireita, IconeEditar, IconeLixo,
@@ -68,7 +68,7 @@ export default function Orcamento() {
 
       <div className="cartao" style={{ marginBottom: 16 }}>
         <dl className="dados">
-          <div><dt>Cliente</dt><dd><Link to={`/clientes/${o.cliente.id}`}>{o.cliente.nome}</Link> · {o.cliente.telefone}</dd></div>
+          <div><dt>Cliente</dt><dd><Link to={`/clientes/${o.cliente.id}`}>{o.cliente.nome}</Link> · {formatarTelefone(o.cliente.telefone)}</dd></div>
           <div><dt>Endereço</dt><dd><Link to={`/enderecos/${o.endereco.id}`}>{formatarEndereco(o.endereco)}</Link></dd></div>
           {o.observacao && <div className="inteiro"><dt>Observações</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{o.observacao}</dd></div>}
         </dl>
