@@ -10,6 +10,7 @@ const Usuario = sequelize.define('Usuario', {
   senha_hash: { type: DataTypes.STRING(255), allowNull: false },
   perfil: { type: DataTypes.ENUM('eletricista', 'secretaria'), allowNull: false },
   ativo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+  cor: { type: DataTypes.STRING(7) },
 }, { tableName: 'usuario', timestamps: false, underscored: true });
 
 // criado_em vem do DEFAULT do banco; sem allowNull/default aqui o Sequelize omite a coluna no INSERT

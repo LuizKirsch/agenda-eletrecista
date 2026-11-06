@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { api } from '../api';
 import DetalheAtividade from '../agenda/DetalheAtividade';
@@ -126,21 +126,18 @@ export default function Agenda() {
 
   const semanaAtual = segundaDe(hoje());
 
-  // RF 1.13: cada chip liga/desliga um eletricista (vários ao mesmo tempo); "Todos" limpa a seleção.
+  // RF 1.13: seleção múltipla de eletricistas; vazio = todos.
   // Inativo só aparece com atividade na semana carregada ou se estiver selecionado.
   const comAtividade = new Set(atividades.map((x) => String(x.eletricista?.id)));
   const alternar = (id) => setFiltro((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
-  const chips = (
-    <div className="chips-eletricista" role="group" aria-label="Filtrar por eletricista">
-      <button type="button" className="chip" aria-pressed={!filtro.length} onClick={() => setFiltro([])}>Todos</button>
-      {eletricistas
-        .filter((u) => u.ativo || filtro.includes(String(u.id)) || comAtividade.has(String(u.id)))
-        .map((u) => (
-          <button key={u.id} type="button" className="chip" aria-pressed={filtro.includes(String(u.id))} onClick={() => alternar(String(u.id))}>
-            {u.nome}{u.ativo ? '' : ' (inativo)'}
-          </button>
-        ))}
-    </div>
+  const filtroEletricistas = (
+    <FiltroEletricistas
+      eletricistas={eletricistas.filter((u) => u.ativo || filtro.includes(String(u.id)) || comAtividade.has(String(u.id)))}
+      selecionados={filtro}
+      todos={eletricistas}
+      onAlternar={alternar}
+      onLimpar={() => setFiltro([])}
+    />
   );
 
   const anterior = () => setSegunda(somarDias(segunda, -7));
@@ -176,7 +173,7 @@ export default function Agenda() {
       {erro && <p className="erro" role="alert">{erro}</p>}
       {aviso && <p className="aviso" role="status">{aviso}</p>}
 
-      {chips}
+      {filtroEletricistas}
 
       {celular ? (
         <>
@@ -244,6 +241,65 @@ export default function Agenda() {
         />
       )}
     </>
+  );
+}
+
+const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// RF 1.13: botão-resumo + popover com busca e checkboxes. Esc e clique fora fecham.
+function FiltroEletricistas({ eletricistas, selecionados, todos, onAlternar, onLimpar }) {
+  const raiz = useRef(null);
+  const botao = useRef(null);
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    if (!aberto) return undefined;
+    const fora = (e) => { if (!raiz.current.contains(e.target)) setAberto(false); };
+    document.addEventListener('pointerdown', fora);
+    return () => document.removeEventListener('pointerdown', fora);
+  }, [aberto]);
+
+  function fechar() {
+    setAberto(false);
+    setBusca('');
+    botao.current?.focus();
+  }
+
+  const nomes = selecionados.map((id) => todos.find((u) => String(u.id) === id)?.nome).filter(Boolean);
+  const resumo = !nomes.length ? 'Todos os eletricistas' : nomes.length <= 2 ? nomes.join(', ') : `${nomes.length} selecionados`;
+  const visiveis = eletricistas.filter((u) => norm(u.nome).includes(norm(busca)));
+
+  return (
+    <div
+      className="filtro-eletricistas"
+      ref={raiz}
+      onKeyDown={(e) => { if (e.key === 'Escape' && aberto) { e.stopPropagation(); fechar(); } }}
+    >
+      <button ref={botao} type="button" className="filtro-botao" aria-haspopup="dialog" aria-expanded={aberto} onClick={() => (aberto ? fechar() : setAberto(true))}>
+        <span>{resumo}</span>
+        <span className="filtro-seta" aria-hidden="true">▾</span>
+        <span className="so-leitor"> Eletricistas</span>
+      </button>
+      {aberto && (
+        <div className="filtro-popover" role="dialog" aria-label="Filtrar por eletricista">
+          <input type="search" aria-label="Buscar eletricista" placeholder="Buscar eletricista" autoComplete="off" autoFocus value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <ul>
+            {visiveis.map((u) => (
+              <li key={u.id}>
+                <label className="checkbox">
+                  <input type="checkbox" checked={selecionados.includes(String(u.id))} onChange={() => onAlternar(String(u.id))} />
+                  <i className="bolinha" style={u.cor ? { background: u.cor } : undefined} aria-hidden="true" />
+                  {u.nome}{u.ativo ? '' : ' (inativo)'}
+                </label>
+              </li>
+            ))}
+            {!visiveis.length && <li className="vazio">Nenhum resultado</li>}
+          </ul>
+          <button type="button" className="discreto" disabled={!selecionados.length} onClick={onLimpar}>Limpar (todos)</button>
+        </div>
+      )}
+    </div>
   );
 }
 

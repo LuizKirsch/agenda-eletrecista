@@ -56,7 +56,7 @@ export default function ListaSemana({ segunda, atividades, onSemanaAnterior, onP
                 const classe = ['item-agenda', a.conflito && !encerrada && 'conflito', encerrada && 'encerrada', a.status === 'cancelada' && 'cancelada']
                   .filter(Boolean).join(' ');
                 return (
-                  <button key={a.id} type="button" className={classe} onClick={() => onAbrir(a)}>
+                  <button key={a.id} type="button" className={classe} style={{ '--cor-el': a.eletricista?.cor }} onClick={() => onAbrir(a)}>
                     <span className="horas"><b>{a.hora_inicio}</b><small>{a.hora_fim}</small></span>
                     <span className="barra" aria-hidden="true" />
                     <span className="info">

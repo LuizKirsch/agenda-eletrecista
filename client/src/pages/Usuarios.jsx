@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useAuth } from '../auth';
 import Modal, { Confirmar } from '../agenda/Modal';
 import { IconeEditar, IconeLixo, IconeMais, iniciais } from '../icones';
+import { PALETA } from '../paleta';
 import { PERFIS } from './Layout';
 
 export default function Usuarios() {
@@ -59,6 +60,7 @@ export default function Usuarios() {
                     <span className="nome">
                       <span className="avatar">{iniciais(u.nome)}</span>
                       {u.nome}
+                      {u.cor && <i className="bolinha" style={{ background: u.cor }} aria-hidden="true" />}
                       {u.id === logado.id && <span className="suave" style={{ fontWeight: 400, fontSize: 12 }}>(você)</span>}
                     </span>
                   </td>
@@ -99,11 +101,12 @@ function FormUsuario({ editando, proprio, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [perfil, setPerfil] = useState(editando?.perfil ?? '');
+  const [cor, setCor] = useState(editando?.cor ?? ''); // vazio: o servidor escolhe a próxima da paleta
 
   async function salvar(e) {
     e.preventDefault();
     const { nome, login, senha, perfil, ativo } = e.currentTarget.elements;
-    const body = { nome: nome.value, login: login.value, senha: senha.value, perfil: perfil.value };
+    const body = { nome: nome.value, login: login.value, senha: senha.value, perfil: perfil.value, ...(perfil.value === 'eletricista' && { cor }) };
     setErro('');
     setEnviando(true);
     try {
@@ -136,6 +139,18 @@ function FormUsuario({ editando, proprio, onFechar, onSalvo }) {
           <SelectBusca name="perfil" required value={perfil} onChange={setPerfil} disabled={proprio}
             opcoes={[{ valor: 'eletricista', rotulo: 'Eletricista' }, { valor: 'secretaria', rotulo: 'Secretária' }]} />
         </label>
+        {perfil === 'eletricista' && (
+          <fieldset className="seletor-cor">
+            <legend>Cor na agenda</legend>
+            <div className="amostras">
+              {PALETA.map((p) => (
+                <button key={p.cor} type="button" className="amostra" style={{ background: p.cor }} aria-label={p.nome} aria-pressed={cor === p.cor} onClick={() => setCor(p.cor)} />
+              ))}
+              <input type="color" aria-label="Cor livre" value={cor || PALETA[0].cor} onChange={(e) => setCor(e.target.value)} />
+            </div>
+            {!cor && <span className="dica">Sem escolha, o sistema usa a próxima cor livre da paleta.</span>}
+          </fieldset>
+        )}
         <label>
           Senha
           <input name="senha" type="password" autoComplete="new-password" required={!editando} />

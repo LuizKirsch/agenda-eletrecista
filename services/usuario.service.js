@@ -3,7 +3,9 @@ const { Op } = require('sequelize');
 const { Usuario, OrdemServico, AtividadeOs } = require('../models');
 const { httpErro } = require('../middlewares/erros');
 
-const CAMPOS_PUBLICOS = ['id', 'nome', 'login', 'perfil', 'ativo'];
+const PALETA = require('../config/paleta');
+
+const CAMPOS_PUBLICOS = ['id', 'nome', 'login', 'perfil', 'ativo', 'cor'];
 const publico = (usuario) => Object.fromEntries(CAMPOS_PUBLICOS.map((c) => [c, usuario[c]]));
 
 async function garantirLoginLivre(login, id) {
@@ -32,19 +34,38 @@ function listar() {
   return Usuario.findAll({ attributes: CAMPOS_PUBLICOS, order: [['nome', 'ASC']] });
 }
 
-async function criar({ nome, login, senha, perfil }) {
+// cor: undefined/'' = não informada; senão #rrggbb (normalizada para minúsculas)
+function validarCor(cor) {
+  if (cor === undefined || cor === null || cor === '') return undefined;
+  const c = String(cor).toLowerCase();
+  if (!/^#[0-9a-f]{6}$/.test(c)) throw httpErro(400, 'Cor inválida. Use o formato #rrggbb.');
+  return c;
+}
+
+// Primeira cor da paleta ainda não usada por outro eletricista; se todas estão em uso, recomeça a paleta.
+async function proximaCor(ignorarId) {
+  const outros = await Usuario.findAll({ where: { perfil: 'eletricista', ...(ignorarId && { id: { [Op.ne]: ignorarId } }) }, attributes: ['cor'] });
+  const usadas = new Set(outros.map((u) => u.cor));
+  return (PALETA.find((p) => !usadas.has(p.cor)) ?? PALETA[outros.length % PALETA.length]).cor;
+}
+
+async function criar({ nome, login, senha, perfil, cor }) {
+  const corInformada = validarCor(cor);
   await garantirLoginLivre(login);
-  const usuario = await salvando(async () => Usuario.create({ nome, login, perfil, senha_hash: await bcrypt.hash(senha, 10) }));
+  const corFinal = perfil === 'eletricista' ? corInformada ?? await proximaCor() : null;
+  const usuario = await salvando(async () => Usuario.create({ nome, login, perfil, cor: corFinal, senha_hash: await bcrypt.hash(senha, 10) }));
   return publico(usuario);
 }
 
-async function atualizar(id, { nome, login, senha, perfil, ativo }, logado) {
+async function atualizar(id, { nome, login, senha, perfil, ativo, cor }, logado) {
+  const corInformada = validarCor(cor);
   const usuario = await buscar(id);
   if (ehOProprio(id, logado) && (perfil !== usuario.perfil || !ativo)) {
     throw httpErro(400, 'Você não pode alterar o perfil nem desativar o próprio usuário.');
   }
   await garantirLoginLivre(login, usuario.id);
-  const dados = { nome, login, perfil, ativo, ...(senha && { senha_hash: await bcrypt.hash(senha, 10) }) };
+  const corFinal = perfil === 'eletricista' ? corInformada ?? usuario.cor ?? await proximaCor(usuario.id) : null;
+  const dados = { nome, login, perfil, ativo, cor: corFinal, ...(senha && { senha_hash: await bcrypt.hash(senha, 10) }) };
   await salvando(() => usuario.update(dados));
   return publico(usuario);
 }

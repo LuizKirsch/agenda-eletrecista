@@ -79,7 +79,7 @@ async function listar(inicio, fim, eletricistaIds) {
     hora_inicio: hhmm(a.hora_inicio),
     hora_fim: hhmm(a.hora_fim),
     status: a.status,
-    eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome },
+    eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome, cor: a.eletricista.cor },
     conflito: conflitos.has(a.id),
     cliente: { id: a.os.cliente.id, nome: a.os.cliente.nome },
     endereco: a.os.endereco,

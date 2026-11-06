@@ -200,6 +200,7 @@ export default function Grade({ segunda, atividades, onNovaOs, onAbrir, onSoltar
                   style={{
                     top: u.ini * PX_POR_MIN,
                     height: Math.max((u.fim - u.ini) * PX_POR_MIN, ALTURA_MIN),
+                    '--cor-el': u.itens.every((x) => x.eletricista?.id === a.eletricista?.id) ? a.eletricista?.cor : undefined,
                     left: `calc(${(u.col * 100) / u.cols}% + 2px)`,
                     width: `calc(${100 / u.cols}% - 4px)`,
                   }}

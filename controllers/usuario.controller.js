@@ -13,7 +13,7 @@ function lerUsuario(body, { edicao = false } = {}) {
   if (!['eletricista', 'secretaria'].includes(perfil)) throw httpErro(400, 'Perfil inválido.');
   if (edicao && typeof body.ativo !== 'boolean') throw httpErro(400, 'Preencha o campo Ativo.');
 
-  return { nome, login, senha, perfil, ...(edicao && { ativo: body.ativo }) };
+  return { nome, login, senha, perfil, cor: body.cor, ...(edicao && { ativo: body.ativo }) };
 }
 
 async function listar(req, res) {

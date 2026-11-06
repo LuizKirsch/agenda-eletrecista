@@ -102,7 +102,7 @@ export default function DetalheAtividade({
             const atual = x.id === a.id;
             const classe = ['atividade', atual && 'atual', atual && x.conflito && x.status === 'agendada' && 'conflito'].filter(Boolean).join(' ');
             return (
-              <li key={x.id} className={classe}>
+              <li key={x.id} className={classe} style={{ '--cor-el': x.eletricista?.cor }}>
                 <button type="button" aria-pressed={atual} onClick={() => { setErro(''); setSelecionadaId(x.id); }}>
                   <span className="numero">{x.sequencia}</span>
                   <span className="info">

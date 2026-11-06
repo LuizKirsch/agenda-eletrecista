@@ -101,7 +101,7 @@ async function detalhar(id) {
     observacao: os.observacao,
     cliente: { id: os.cliente.id, nome: os.cliente.nome, telefone: os.cliente.telefone },
     endereco: os.endereco,
-    eletricista: os.eletricista && { id: os.eletricista.id, nome: os.eletricista.nome, ativo: os.eletricista.ativo },
+    eletricista: os.eletricista && { id: os.eletricista.id, nome: os.eletricista.nome, cor: os.eletricista.cor, ativo: os.eletricista.ativo },
     atividades: os.atividades.map((a) => ({
       id: a.id,
       sequencia: a.sequencia,
@@ -110,7 +110,7 @@ async function detalhar(id) {
       hora_inicio: hhmm(a.hora_inicio),
       hora_fim: hhmm(a.hora_fim),
       status: a.status,
-      eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome, ativo: a.eletricista.ativo },
+      eletricista: a.eletricista && { id: a.eletricista.id, nome: a.eletricista.nome, cor: a.eletricista.cor, ativo: a.eletricista.ativo },
       conflito: conflitos.has(a.id),
     })),
   };
