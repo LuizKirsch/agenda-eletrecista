@@ -1,0 +1,17 @@
+# Troque pelo seu subdomínio real. O DNS (registro A) precisa já apontar pro IP da VPS,
+# senão o Let's Encrypt não consegue validar e o HTTPS não sai.
+
+{
+	email seu-email@exemplo.com
+}
+
+agenda.seudominio.com.br {
+	encode zstd gzip
+	# "agenda-app" é o container_name do app; 3000 é a porta interna do Express
+	reverse_proxy agenda-app:3000
+}
+
+# Próximo projeto, por exemplo:
+# outro.seudominio.com.br {
+# 	reverse_proxy outro-app:8080
+# }
