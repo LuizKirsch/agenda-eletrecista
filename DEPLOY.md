@@ -2,21 +2,24 @@
 
 Arquitetura: **Caddy** (único com portas 80/443, HTTPS automático) → rede Docker `proxy` → **agenda-app** (Express servindo API + build do React) → rede `interna` → **MySQL**.
 
-## 1. DNS (no painel onde o domínio está)
+VPS: `187.41.125.189` (Hostinger). Endereço do app: **https://agenda.187-41-125-189.sslip.io**
 
-Crie um registro **A**: `agenda` → `IP_DA_VPS`. Confira com `ping agenda.seudominio.com.br` antes do passo 5.
+## 1. DNS
+
+Nada a fazer por enquanto: o sslip.io resolve `agenda.187-41-125-189.sslip.io` direto para o IP.
+Quando tiver domínio próprio, crie um registro **A** `agenda` → `187.41.125.189` e troque o nome no `Caddyfile`.
 
 ## 2. Primeiro acesso e segurança básica
 
 ```bash
-ssh root@IP_DA_VPS
+ssh root@187.41.125.189
 apt update && apt upgrade -y
 adduser luiz && usermod -aG sudo luiz
 
 # no SEU computador: copia sua chave SSH (gere antes com ssh-keygen -t ed25519 se não tiver)
-ssh-copy-id luiz@IP_DA_VPS
+ssh-copy-id luiz@187.41.125.189
 
-# de volta na VPS, depois de testar o login com a chave em outro terminal:
+# de volta na VPS, SÓ depois de testar o login com a chave em outro terminal:
 sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/; s/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sudo systemctl restart ssh
 
@@ -26,6 +29,10 @@ sudo ufw enable
 
 sudo apt install -y unattended-upgrades fail2ban
 sudo timedatectl set-timezone America/Sao_Paulo
+
+# se a VPS tiver 1 GB de RAM (confira com free -h), crie swap:
+# sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+# echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
 ## 3. Docker
@@ -54,12 +61,11 @@ docker compose logs -f app      # deve aparecer as migrations e "Servidor rodand
 ```bash
 sudo mkdir -p /opt/proxy && sudo chown luiz: /opt/proxy
 cp deploy/proxy/* /opt/proxy/ && cd /opt/proxy
-nano Caddyfile                  # troque e-mail e subdomínio
 docker compose up -d
 docker compose logs -f          # procure "certificate obtained successfully"
 ```
 
-Pronto: `https://agenda.seudominio.com.br`.
+Pronto: https://agenda.187-41-125-189.sslip.io
 
 ## Atualizar depois de um push
 
