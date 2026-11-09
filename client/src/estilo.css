@@ -67,6 +67,10 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: var(--afu
 input:disabled, select:disabled { color: var(--texto-suave); opacity: .7; }
 textarea { padding: 10px 12px; min-height: 96px; resize: vertical; line-height: 1.5; }
 .dica { font-size: 12px; font-weight: 400; color: var(--texto-suave); }
+/* select com botão de cadastro rápido ao lado (cliente/endereço no orçamento e na OS) */
+.com-acao { display: flex; gap: 8px; }
+.com-acao > select { flex: 1; }
+.com-acao > button { flex: none; white-space: nowrap; }
 
 .checkbox { display: flex; align-items: center; gap: 10px; font-weight: 400; }
 .checkbox input { width: 18px; min-height: 18px; height: 18px; margin: 0; box-shadow: none; accent-color: var(--primaria); }

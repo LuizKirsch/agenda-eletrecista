@@ -3,6 +3,8 @@ import { api } from '../api';
 import { hoje, paraHora, paraMin } from '../datas';
 import { formatarDataHora, formatarEndereco } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
+import { FormEndereco } from '../pages/Cliente';
+import FormCliente from '../pages/FormCliente';
 import Modal from './Modal';
 
 // Fim = início + duração padrão do tipo (RF 1.8, RN 2)
@@ -10,6 +12,9 @@ function fimPara(inicio, tipo) {
   if (!inicio || !tipo) return '';
   return paraHora((paraMin(inicio) + tipo.duracao_padrao_min) % 1440);
 }
+
+// cliente cadastrado na hora entra na lista na ordem alfabética, como a API devolve
+const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR');
 
 const SEM_TIPO_ATIVO = 'Não há tipos de atividade ativos. Cadastre ou reative um tipo para criar uma OS.';
 
@@ -32,6 +37,7 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   const [orcamentoId, setOrcamentoId] = useState(null);
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [cadastro, setCadastro] = useState(null); // 'cliente' | 'endereco': cadastro rápido sem sair da OS
   const chave = useRef(0);
   const novaChave = () => ++chave.current;
 
@@ -133,21 +139,27 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
           <label>
             Cliente
             {/* RN 57: OS gerada por orçamento não troca de cliente */}
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} disabled={!!orcamentoId} required>
-              <option value="" disabled>Selecione</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
-            </select>
+            <span className="com-acao">
+              <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} disabled={!!orcamentoId} required>
+                <option value="" disabled>Selecione</option>
+                {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
+              </select>
+              {!orcamentoId && <button type="button" onClick={() => setCadastro('cliente')}><IconeMais />Novo</button>}
+            </span>
             {orcamentoId && <span className="dica">OS gerada pelo orçamento nº {orcamentoId}; o cliente não pode ser trocado.</span>}
           </label>
 
           <label>
             <span>Endereço <span className="opcional">(opcional)</span></span>
-            <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId}>
-              <option value="">Sem endereço</option>
-              {enderecos.map((en) => (
-                <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
-              ))}
-            </select>
+            <span className="com-acao">
+              <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId}>
+                <option value="">Sem endereço</option>
+                {enderecos.map((en) => (
+                  <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => setCadastro('endereco')} disabled={!clienteId}><IconeMais />Novo</button>
+            </span>
           </label>
 
           {observacoesEndereco.length > 0 && (
@@ -205,6 +217,34 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
         </form>
       )}
       {!tipos && erro && <p className="erro" role="alert">{erro}</p>}
+
+      {/* fora do <form> da OS: o modal empilhado tem o próprio form */}
+      {cadastro === 'cliente' && (
+        <FormCliente
+          onFechar={() => setCadastro(null)}
+          onSalvo={(novo) => {
+            setClientes((lista) => [...lista, novo].sort(porNome));
+            setClienteId(String(novo.id));
+            setEnderecoId('');
+            setAlterado(true);
+            // na OS o endereço é opcional: não abre o cadastro dele sozinho, fica o botão "Novo" ao lado
+            setCadastro(null);
+          }}
+        />
+      )}
+      {cadastro === 'endereco' && (
+        <FormEndereco
+          clienteId={clienteId}
+          clienteNome={clientes.find((c) => String(c.id) === clienteId)?.nome}
+          onFechar={() => setCadastro(null)}
+          onSalvo={(novo) => {
+            setEnderecos((lista) => [...lista.filter((en) => en.id !== novo.id), novo]);
+            setEnderecoId(String(novo.id));
+            setAlterado(true);
+            setCadastro(null);
+          }}
+        />
+      )}
     </Modal>
   );
 }

@@ -3,6 +3,8 @@ import { api } from '../api';
 import Modal from '../agenda/Modal';
 import { formatarEndereco, formatarReais } from '../formato';
 import { IconeLixo, IconeMais } from '../icones';
+import { FormEndereco } from './Cliente';
+import FormCliente from './FormCliente';
 
 // RF 4.9: tempo sugerido = quantidade × duração padrão do tipo, dentro de 5 a 720 min
 const tempoPara = (tipo, quantidade) => Math.min(720, Math.max(5, (Number(quantidade) || 1) * tipo.duracao_padrao_min));
@@ -12,6 +14,9 @@ const AVULSO = 'avulso';
 const itemVazio = (chave) => ({ chave, tipo_atividade_id: '', descricao: '', quantidade: 1, valor_unitario: '', duracao_min: '' });
 
 const centavos = (i) => (Number(i.quantidade) || 0) * Math.round((Number(i.valor_unitario) || 0) * 100);
+
+// cliente cadastrado na hora entra na lista na ordem alfabética, como a API devolve
+const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR');
 
 export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
   const [tipos, setTipos] = useState(null);
@@ -24,6 +29,7 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [alterado, setAlterado] = useState(false);
+  const [cadastro, setCadastro] = useState(null); // 'cliente' | 'endereco': cadastro rápido sem sair do orçamento
   const chave = useRef(0);
   const novaChave = () => ++chave.current;
 
@@ -115,20 +121,26 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
         <form id="form-orcamento" className="campos" onSubmit={salvar} onChange={() => setAlterado(true)}>
           <label>
             Cliente
-            <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} required>
-              <option value="" disabled>Selecione</option>
-              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
-            </select>
+            <span className="com-acao">
+              <select value={clienteId} onChange={(e) => { setClienteId(e.target.value); setEnderecoId(''); }} required>
+                <option value="" disabled>Selecione</option>
+                {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome} · {c.telefone}</option>)}
+              </select>
+              <button type="button" onClick={() => setCadastro('cliente')}><IconeMais />Novo</button>
+            </span>
           </label>
 
           <label>
             Endereço
-            <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId} required>
-              <option value="" disabled>{clienteId && !enderecos.length ? 'Cliente sem endereço cadastrado' : 'Selecione'}</option>
-              {enderecos.map((en) => (
-                <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
-              ))}
-            </select>
+            <span className="com-acao">
+              <select value={enderecoId} onChange={(e) => setEnderecoId(e.target.value)} disabled={!clienteId} required>
+                <option value="" disabled>{clienteId && !enderecos.length ? 'Cliente sem endereço cadastrado' : 'Selecione'}</option>
+                {enderecos.map((en) => (
+                  <option key={en.id} value={en.id}>{en.identificacao ? `${en.identificacao} · ` : ''}{formatarEndereco(en)}</option>
+                ))}
+              </select>
+              <button type="button" onClick={() => setCadastro('endereco')} disabled={!clienteId}><IconeMais />Novo</button>
+            </span>
           </label>
 
           <div className="grupo-atividades">
@@ -178,6 +190,34 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
         </form>
       )}
       {!tipos && erro && <p className="erro" role="alert">{erro}</p>}
+
+      {/* fora do <form> do orçamento: o modal empilhado tem o próprio form */}
+      {cadastro === 'cliente' && (
+        <FormCliente
+          onFechar={() => setCadastro(null)}
+          onSalvo={(novo) => {
+            setClientes((lista) => [...lista, novo].sort(porNome));
+            setClienteId(String(novo.id));
+            setEnderecoId('');
+            setAlterado(true);
+            // cliente novo não tem endereço e o orçamento exige um: já abre o cadastro do endereço
+            setCadastro('endereco');
+          }}
+        />
+      )}
+      {cadastro === 'endereco' && (
+        <FormEndereco
+          clienteId={clienteId}
+          clienteNome={clientes.find((c) => String(c.id) === clienteId)?.nome}
+          onFechar={() => setCadastro(null)}
+          onSalvo={(novo) => {
+            setEnderecos((lista) => [...lista.filter((en) => en.id !== novo.id), novo]);
+            setEnderecoId(String(novo.id));
+            setAlterado(true);
+            setCadastro(null);
+          }}
+        />
+      )}
     </Modal>
   );
 }
