@@ -1,5 +1,13 @@
 const usuarioService = require('../services/usuario.service');
 const { httpErro, exigirCampos } = require('../middlewares/erros');
+const { lerId } = require('./os.controller');
+
+// RN 31: id canônico ("01" não pode burlar a checagem de "é o próprio usuário").
+function idDaRota(req) {
+  const id = lerId(req.params.id);
+  if (!id) throw httpErro(404, 'Usuário não encontrado.');
+  return id;
+}
 
 function lerUsuario(body, { edicao = false } = {}) {
   exigirCampos(body, { nome: 'Nome', login: 'Login', ...(!edicao && { senha: 'Senha' }), perfil: 'Perfil' });
@@ -25,11 +33,11 @@ async function criar(req, res) {
 }
 
 async function atualizar(req, res) {
-  res.json(await usuarioService.atualizar(req.params.id, lerUsuario(req.body, { edicao: true }), req.usuario));
+  res.json(await usuarioService.atualizar(idDaRota(req), lerUsuario(req.body, { edicao: true }), req.usuario));
 }
 
 async function excluir(req, res) {
-  await usuarioService.excluir(req.params.id, req.usuario);
+  await usuarioService.excluir(idDaRota(req), req.usuario);
   res.status(204).end();
 }
 

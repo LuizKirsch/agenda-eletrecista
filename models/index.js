@@ -51,8 +51,8 @@ const TipoAtividade = sequelize.define('TipoAtividade', {
 const OrdemServico = sequelize.define('OrdemServico', {
   id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
   cliente_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-  endereco_id: { type: DataTypes.BIGINT.UNSIGNED },
-  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED },
+  endereco_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
+  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   observacao: { type: DataTypes.TEXT },
 }, { tableName: 'ordem_servico', timestamps: false, underscored: true });
 
@@ -61,13 +61,13 @@ const AtividadeOs = sequelize.define('AtividadeOs', {
   id: { type: DataTypes.BIGINT.UNSIGNED, primaryKey: true, autoIncrement: true },
   ordem_servico_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   tipo_atividade_id: { type: DataTypes.BIGINT.UNSIGNED },
-  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED },
+  eletricista_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
   descricao: { type: DataTypes.STRING(100) },
   sequencia: { type: DataTypes.INTEGER, allowNull: false },
   data: { type: DataTypes.DATEONLY, allowNull: false },
   hora_inicio: { type: DataTypes.TIME, allowNull: false },
   hora_fim: { type: DataTypes.TIME, allowNull: false },
-  status: { type: DataTypes.ENUM('agendada', 'concluida', 'cancelada'), defaultValue: 'agendada' },
+  status: { type: DataTypes.ENUM('agendada', 'concluida', 'cancelada'), allowNull: false, defaultValue: 'agendada' },
 }, { tableName: 'atividade_os', timestamps: false, underscored: true });
 
 const Orcamento = sequelize.define('Orcamento', {

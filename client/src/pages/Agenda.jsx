@@ -43,10 +43,12 @@ export default function Agenda() {
   // { tela: 'os' | 'detalhe' | 'remarcar' | 'arraste', ... }
   const [modal, setModal] = useState(null);
 
+  const pedido = useRef(0); // só a resposta da última chamada vale (descarta semana antiga)
   const carregar = useCallback(() => {
+    const meu = ++pedido.current;
     api(`/agenda?inicio=${segunda}&fim=${somarDias(segunda, 6)}${filtro.length ? `&eletricista_id=${filtro.join(',')}` : ''}`)
-      .then(setAtividades)
-      .catch((err) => setErro(err.message));
+      .then((lista) => { if (meu === pedido.current) { setAtividades(lista); setErro(''); } })
+      .catch((err) => { if (meu === pedido.current) setErro(err.message); });
   }, [segunda, filtro]);
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function Agenda() {
 
   useEffect(() => {
     carregar();
+    return () => { pedido.current++; };
   }, [carregar]);
 
   // RF 1.27: toda alteração fecha o modal e recarrega a semana visível

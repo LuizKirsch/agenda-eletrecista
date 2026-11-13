@@ -72,7 +72,9 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
   // RF 3.6 / RF 3.7: observações do endereço, mais recente primeiro (a API já ordena)
   useEffect(() => {
     setObservacoesEndereco([]);
-    if (enderecoId) api(`/enderecos/${enderecoId}/observacoes`).then(setObservacoesEndereco).catch((err) => setErro(err.message));
+    let ativo = true;
+    if (enderecoId) api(`/enderecos/${enderecoId}/observacoes`).then((l) => { if (ativo) setObservacoesEndereco(l); }).catch((err) => { if (ativo) setErro(err.message); });
+    return () => { ativo = false; };
   }, [enderecoId]);
 
   function alterarLinha(chaveLinha, campos) {
