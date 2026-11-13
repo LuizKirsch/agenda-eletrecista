@@ -5,7 +5,7 @@
 services:
   app:
     build: .
-    container_name: agenda-app
+    container_name: ${APP_CONTAINER:-agenda-app}
     restart: unless-stopped
     env_file: .env                 # .env de produção, criado a partir de .env.production.example
     environment:
@@ -21,7 +21,7 @@ services:
 
   db:
     image: mysql:8.4
-    container_name: agenda-db
+    container_name: ${DB_CONTAINER:-agenda-db}
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_NAME}
