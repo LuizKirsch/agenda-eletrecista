@@ -1,0 +1,15 @@
+# Subdomínio provisório via sslip.io: o próprio nome já resolve para o IP 187.41.125.189,
+# sem precisar configurar DNS. O Caddy emite o HTTPS (Let's Encrypt) automaticamente.
+# Quando tiver domínio próprio: crie o registro A, troque o nome abaixo e rode
+#   docker compose restart   (na pasta /opt/proxy)
+
+agenda.187-41-125-189.sslip.io {
+	encode zstd gzip
+	# "agenda-app" é o container_name do app; 3000 é a porta interna do Express
+	reverse_proxy agenda-app:3000
+}
+
+# Próximo projeto, por exemplo:
+# outro.187-41-125-189.sslip.io {
+# 	reverse_proxy outro-app:8080
+# }

@@ -1,0 +1,10 @@
+# Evita mandar lixo/segredos para dentro da imagem
+node_modules
+client/node_modules
+client/dist
+.git
+.claude
+.env
+*.sqlite
+npm-debug.log
+deploy

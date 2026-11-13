@@ -1,0 +1,28 @@
+# Copiar para /opt/proxy/ na VPS (fica fora do repositório do app).
+# Caddy é o único container com portas abertas (80/443). Ele emite e renova
+# o certificado HTTPS (Let's Encrypt) sozinho para cada subdomínio do Caddyfile.
+# Projetos futuros: basta entrar na rede "proxy" e ganhar um bloco no Caddyfile.
+
+services:
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"              # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data           # certificados — não apague esse volume
+      - caddy_config:/config
+    networks:
+      - proxy
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  proxy:
+    external: true

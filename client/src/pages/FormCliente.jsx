@@ -4,7 +4,8 @@ import { api } from '../api';
 import Modal from '../agenda/Modal';
 import { formatarTelefone } from '../formato';
 
-// sem `cliente`: cadastra e abre a ficha; com `cliente`: edita e devolve em onSalvo (RF 3.9)
+// sem `cliente`: cadastra e abre a ficha, ou devolve em onSalvo quando ele vem (cadastro rápido no orçamento/OS)
+// com `cliente`: edita e devolve em onSalvo (RF 3.9)
 export default function FormCliente({ cliente, onFechar, onSalvo }) {
   const navigate = useNavigate();
   const [erro, setErro] = useState('');
@@ -19,7 +20,9 @@ export default function FormCliente({ cliente, onFechar, onSalvo }) {
       if (cliente) {
         onSalvo(await api(`/clientes/${cliente.id}`, { method: 'PUT', body }));
       } else {
-        navigate(`/clientes/${(await api('/clientes', { method: 'POST', body })).id}`);
+        const novo = await api('/clientes', { method: 'POST', body });
+        if (onSalvo) onSalvo(novo);
+        else navigate(`/clientes/${novo.id}`);
       }
     } catch (err) {
       setErro(err.message);

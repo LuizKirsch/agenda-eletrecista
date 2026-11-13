@@ -254,7 +254,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   .conteudo { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
 }
 
-.conteudo { max-width: 1160px; padding: 16px; }
+.conteudo { padding: 16px; }
 @media (min-width: 768px) { .conteudo { padding: 32px 40px; } }
 .conteudo.largo { max-width: none; }
 @media (min-width: 768px) { .conteudo.largo { padding: 24px 32px; } }
