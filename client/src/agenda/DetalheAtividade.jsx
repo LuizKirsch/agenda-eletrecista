@@ -90,7 +90,7 @@ export default function DetalheAtividade({
           <span className="avatar">{iniciais(os.cliente.nome)}</span>
           <div>
             <strong>{os.cliente.nome}</strong>
-            <span className="suave" style={{ fontSize: 13 }}>{formatarTelefone(os.cliente.telefone)}</span>
+            <span className="suave" style={{ fontSize: 'calc(13px * var(--fonte))' }}>{formatarTelefone(os.cliente.telefone)}</span>
           </div>
         </div>
         {os.endereco && (

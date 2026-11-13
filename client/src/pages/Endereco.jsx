@@ -73,7 +73,7 @@ export default function Endereco() {
               <span className="avatar">{iniciais(cliente.nome)}</span>
               <div>
                 {cliente.id ? <Link to={`/clientes/${cliente.id}`} style={{ fontWeight: 600, textDecoration: 'none' }}>{cliente.nome}</Link> : <strong>{cliente.nome}</strong>}
-                <span className="suave" style={{ fontSize: 13 }}>{formatarTelefone(cliente.telefone)}</span>
+                <span className="suave" style={{ fontSize: 'calc(13px * var(--fonte))' }}>{formatarTelefone(cliente.telefone)}</span>
               </div>
             </div>
           </div>

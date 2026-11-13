@@ -61,7 +61,7 @@ export default function Usuarios() {
                       <span className="avatar">{iniciais(u.nome)}</span>
                       {u.nome}
                       {u.cor && <i className="bolinha" style={{ background: u.cor }} aria-hidden="true" />}
-                      {u.id === logado.id && <span className="suave" style={{ fontWeight: 400, fontSize: 12 }}>(você)</span>}
+                      {u.id === logado.id && <span className="suave" style={{ fontWeight: 400, fontSize: 'calc(12px * var(--fonte))' }}>(você)</span>}
                     </span>
                   </td>
                   <td className="suave">{u.login}</td>

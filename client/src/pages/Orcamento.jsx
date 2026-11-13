@@ -359,7 +359,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
       )}
     >
       <form id="form-aceitar" className="campos" onSubmit={aceitar}>
-        <p className="suave" style={{ fontSize: 13 }}>
+        <p className="suave" style={{ fontSize: 'calc(13px * var(--fonte))' }}>
           Será criada uma OS com uma atividade por item, em sequência a partir do início escolhido. O item que não couber no dia vai para o dia seguinte, no mesmo horário; ajuste a data e o início de cada um se precisar. Depois de aceito, o orçamento não pode mais ser editado.
         </p>
         <label>
@@ -371,7 +371,7 @@ function AceitarOrcamento({ orcamento, onFechar, onAceito }) {
         <label className="c3 meia">Início<input type="time" value={inicio} onChange={(e) => mudarInicioGeral(data, e.target.value)} required /></label>
 
         <div className="grupo-atividades">
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>
+          <span style={{ fontSize: 'calc(13px * var(--fonte))', fontWeight: 500, color: 'var(--texto-2)' }}>
             Agenda da OS · {dias === 1 ? '1 dia' : `${dias} dias`}{calculando && ' · Calculando…'}
           </span>
           {itens.map((item, i) => {

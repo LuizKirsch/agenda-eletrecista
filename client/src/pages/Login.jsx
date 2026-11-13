@@ -31,7 +31,7 @@ export default function Login() {
           <span className="marca-icone"><IconeRaio /></span>
           <div>
             <h1>Agenda</h1>
-            <p className="suave" style={{ fontSize: 13 }}>Agenda e ordens de serviço</p>
+            <p className="suave" style={{ fontSize: 'calc(13px * var(--fonte))' }}>Agenda e ordens de serviço</p>
           </div>
         </div>
         <label>

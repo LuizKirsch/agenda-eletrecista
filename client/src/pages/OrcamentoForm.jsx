@@ -106,7 +106,7 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
           <SeletorClienteEndereco clienteId={clienteId} enderecoId={enderecoId} onCliente={setClienteId} onEndereco={setEnderecoId} />
 
           <div className="grupo-atividades">
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Itens de serviço</span>
+            <span style={{ fontSize: 'calc(13px * var(--fonte))', fontWeight: 500, color: 'var(--texto-2)' }}>Itens de serviço</span>
             {itens.map((item, n) => (
               <div key={item.chave} className="card-atividade">
                 <div className="tipo">
@@ -132,7 +132,7 @@ export default function OrcamentoForm({ orcamento, onFechar, onSalvo }) {
                 <label>Quantidade<input type="number" inputMode="numeric" min={1} step={1} value={item.quantidade} onChange={(e) => alterarItem(item.chave, { quantidade: e.target.value })} required /></label>
                 <label>Valor unitário (R$)<input type="number" inputMode="decimal" min={0} step={0.01} value={item.valor_unitario} onChange={(e) => alterarItem(item.chave, { valor_unitario: e.target.value })} required /></label>
                 <label>Tempo (min)<input type="number" inputMode="numeric" min={5} max={720} step={1} value={item.duracao_min} onChange={(e) => alterarItem(item.chave, { duracao_min: e.target.value })} required /></label>
-                <span className="inteira suave" style={{ fontSize: 13 }}>Subtotal {formatarReais(centavos(item) / 100)}</span>
+                <span className="inteira suave" style={{ fontSize: 'calc(13px * var(--fonte))' }}>Subtotal {formatarReais(centavos(item) / 100)}</span>
               </div>
             ))}
             <button type="button" className="tracejado" onClick={() => { setItens([...itens, itemVazio(novaChave())]); setAlterado(true); }}>

@@ -161,7 +161,7 @@ export default function OsForm({ osId, data, hora, titulo, adicionarAtividade, o
           )}
 
           <div className="grupo-atividades">
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Atividades</span>
+            <span style={{ fontSize: 'calc(13px * var(--fonte))', fontWeight: 500, color: 'var(--texto-2)' }}>Atividades</span>
             {linhas.map((l, i) => (
               <div key={l.chave} className="card-atividade">
                 <div className="tipo">

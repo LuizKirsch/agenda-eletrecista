@@ -66,7 +66,7 @@ export default function SeletorClienteEndereco({ clienteId, enderecoId, onClient
   return (
     <>
       <div>
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--texto-2)' }}>Cliente</span>
+        <span style={{ fontSize: 'calc(13px * var(--fonte))', fontWeight: 500, color: 'var(--texto-2)' }}>Cliente</span>
         {clienteId ? (
           <p style={{ margin: '6px 0 0' }}>
             <strong>{cliente ? `${cliente.nome} · ${formatarTelefone(cliente.telefone)}` : 'Carregando…'}</strong>{' '}
