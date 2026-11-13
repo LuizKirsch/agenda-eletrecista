@@ -1,0 +1,55 @@
+# .github/workflows/deploy.yml
+# Push na develop -> atualiza o agenda-dev
+# Push na main    -> atualiza a produção
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:          # botão "Run workflow" na aba Actions, para deploy manual
+
+# Um deploy por branch de cada vez. Se der dois pushes seguidos, o segundo espera.
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Decide o ambiente e a URL pela branch que recebeu o push
+      - name: Definir ambiente
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TARGET=prod" >> $GITHUB_ENV
+            echo "URL=https://agenda.187-41-125-189.sslip.io" >> $GITHUB_ENV
+          else
+            echo "TARGET=dev" >> $GITHUB_ENV
+            echo "URL=https://agenda-dev.187-41-125-189.sslip.io" >> $GITHUB_ENV
+          fi
+
+      # Monta a chave e a identidade da VPS na máquina do GitHub
+      - name: Configurar SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # Conecta e manda só "dev" ou "prod". A VPS roda o deploy.sh
+      - name: Deploy
+        run: ssh -i ~/.ssh/deploy_key root@${{ secrets.VPS_HOST }} "$TARGET"
+
+      # Confere se o site respondeu depois do deploy (tenta por até ~1 min)
+      - name: Verificar se subiu
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS -o /dev/null "$URL"; then echo "OK: $URL no ar"; exit 0; fi
+            echo "Aguardando app subir... ($i/12)"; sleep 5
+          done
+          echo "Site não respondeu depois do deploy"; exit 1
