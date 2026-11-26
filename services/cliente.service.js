@@ -26,11 +26,18 @@ async function validarTelefone(telefone, idAtual) {
   return digitos;
 }
 
+// RN 39: a busca vale para parte do nome ou parte do telefone. Os dígitos do termo só entram no
+// filtro de telefone quando o termo inteiro parece um telefone (dígitos, espaço, parênteses, + e -).
+// Sem isso, "Apto 77" virava telefone LIKE '%77%' e trazia clientes que não têm relação com a busca.
+const pareceTelefone = (t) => /^[\d\s()+-]+$/.test(t) && soDigitos(t) !== '';
+
 function listar(busca) {
   const termo = `%${busca}%`;
+  const criterios = [{ nome: { [Op.like]: termo } }];
+  if (busca && pareceTelefone(busca)) criterios.push({ telefone: { [Op.like]: `%${soDigitos(busca)}%` } });
   return Cliente.findAll({
     attributes: ['id', 'nome', 'telefone'],
-    where: busca ? { [Op.or]: [{ nome: { [Op.like]: termo } }, { telefone: { [Op.like]: `%${soDigitos(busca) || busca}%` } }] } : undefined,
+    where: busca ? { [Op.or]: criterios } : undefined,
     order: [['nome', 'ASC'], ['id', 'ASC']],
   });
 }
