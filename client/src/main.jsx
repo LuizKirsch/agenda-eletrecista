@@ -13,9 +13,11 @@ import Orcamentos from './pages/Orcamentos';
 import TiposAtividade from './pages/TiposAtividade';
 import Usuarios from './pages/Usuarios';
 import { aplicarTamanho, tamanhoSalvo } from './fonte';
+import { aplicarTema, temaSalvo } from './tema';
 import './estilo.css';
 
 aplicarTamanho(tamanhoSalvo()); // RF 2.15: antes de renderizar, sem piscar
+aplicarTema(temaSalvo()); // RF 2.16
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>

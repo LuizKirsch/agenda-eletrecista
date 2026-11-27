@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigate } from 'react-router';
 import { useAuth } from '../auth';
 import { IconeRaio } from '../icones';
+import { BotaoTema } from './Layout';
 
 export default function Login() {
   const { usuario, carregando, aviso, login } = useAuth();
@@ -45,6 +46,7 @@ export default function Login() {
         {(erro || aviso) && <p className="erro" role="alert">{erro || aviso}</p>}
         <button className="primario" disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'}</button>
       </form>
+      <BotaoTema />
     </main>
   );
 }
