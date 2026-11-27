@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth';
 import { aplicarTamanho, tamanhoSalvo } from '../fonte';
+import { aplicarTema, temaSalvo } from '../tema';
 import {
-  IconeAgenda, IconeClientes, IconeOrcamento, IconeRaio, IconeSair, IconeTipos, IconeUsuario, iniciais,
+  IconeAgenda, IconeClientes, IconeLua, IconeOrcamento, IconeRaio, IconeSair, IconeSol, IconeTipos, IconeUsuario, iniciais,
 } from '../icones';
 
 export const PERFIS = { eletricista: 'Eletricista', secretaria: 'Secretária' };
@@ -20,6 +21,18 @@ function TamanhoLetra({ valor, aoMudar }) {
         <option value="extra">Extra grande</option>
       </select>
     </label>
+  );
+}
+
+// RF 2.16: alternar tema claro/escuro (menu e tela de login)
+export function BotaoTema() {
+  const [tema, setTema] = useState(temaSalvo);
+  const escuro = tema === 'escuro';
+  const alternar = () => { const novo = escuro ? 'claro' : 'escuro'; aplicarTema(novo); setTema(novo); };
+  return (
+    <button type="button" className="botao-tema" aria-pressed={escuro} onClick={alternar}>
+      {escuro ? <IconeSol /> : <IconeLua />}Modo escuro
+    </button>
   );
 }
 
@@ -41,6 +54,7 @@ export default function Layout() {
           <NavLink to="/usuarios"><IconeUsuario />Usuários</NavLink>
         </nav>
         <TamanhoLetra valor={tamanho} aoMudar={mudarTamanho} />
+        <BotaoTema />
         <div className="quem">
           <span className="avatar destaque">{iniciais(usuario.nome)}</span>
           <div>
@@ -59,6 +73,7 @@ export default function Layout() {
           <div className="menu-conta">
             <div><strong>{usuario.nome}</strong><div className="suave">{PERFIS[usuario.perfil]}</div></div>
             <TamanhoLetra valor={tamanho} aoMudar={mudarTamanho} />
+            <BotaoTema />
             <button type="button" onClick={logout}><IconeSair />Sair</button>
           </div>
         </details>
